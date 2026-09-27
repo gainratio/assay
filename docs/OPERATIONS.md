@@ -75,6 +75,17 @@ calibration bins, seed 12,345, and ranking depth 10. Controls may be supplied in
 measurement request. The legacy settings API additionally reads `ASSAY_*` environment
 variables only when that optional surface is constructed.
 
+Each control, its legacy environment variable, and its default:
+
+| Control | Environment variable | Default | What it changes |
+|---|---|---:|---|
+| `min_samples` | `ASSAY_MIN_SAMPLES` | 30 | Fewest samples before an interval is reported; below it Assay abstains |
+| `bootstrap_resamples` | `ASSAY_BOOTSTRAP_RESAMPLES` | 9,999 | Resamples for bootstrap confidence intervals |
+| `confidence_level` | `ASSAY_CONFIDENCE_LEVEL` | 0.95 | Width of those intervals |
+| `ece_bins` | `ASSAY_ECE_BINS` | 15 | Calibration bins |
+| `bootstrap_seed` | `ASSAY_BOOTSTRAP_SEED` | 12,345 | Seed that makes resampling repeatable |
+| `ranking_k` | `ASSAY_RANKING_K` | 10 | Ranking depth ("first page") |
+
 The ceilings are validation and resource-safety contracts, not performance promises.
 No production latency, throughput, or memory service level is claimed for the current
 prerelease artifacts.

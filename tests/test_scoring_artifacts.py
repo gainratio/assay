@@ -13,9 +13,8 @@ import pytest
 
 _ROOT = Path(__file__).resolve().parents[1]
 _BOUNDARY = (
-    "Assay computes scores; Avow seals evidence. They are separate products in separate "
-    "repositories, and neither imports or requires the other. The already-published `avow` "
-    "0.4.1 and `@edgeproc/avow` 0.4.1 artifacts remain unchanged."
+    "Assay only computes scores. Sealing evidence about a result is a separate project, "
+    "Avow, and neither package imports or requires the other."
 )
 _LEGACY_PATHS = (
     "/avow/",

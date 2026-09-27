@@ -4,6 +4,14 @@
 
 ### Changed
 
+- The README is rewritten in plain English: one-sentence description, a copy-paste
+  Python and JavaScript example with real output, honest limits, and a link to every
+  technical doc. Deep material moved to `docs/ARCHITECTURE.md` and `docs/OPERATIONS.md`,
+  and a new `docs/GETTING_STARTED.md` takes a developer from clone to first change.
+  `tests/test_readme_contract.py` now pins the section order, the doc links, and a
+  banned-jargon list. The Python and npm package descriptions equal the new first
+  sentence, which changes the pinned npm archive SHA-256 to `eb115cbd…a10d1b3ee`;
+  scoring sources are unchanged and nothing was re-published.
 - The README follows the portfolio template: a plain-language first screen, a runnable
   60-second example whose real output is the hero, and a `tests/test_readme_contract.py`
   gate that re-runs that example. The Python and npm package descriptions now equal the
