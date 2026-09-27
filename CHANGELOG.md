@@ -2,6 +2,15 @@
 
 ## [Unreleased]
 
+### Fixed
+
+- Post-publish verification now fails when npm `latest` does not name an installable
+  release. The registry made the empty `0.0.0-bootstrap.0` trusted-publishing stub
+  `latest` on first publish (npm ignores `--tag` for a package's first version), and
+  prereleases only move `next`, so `npm install @edgeproc/assay` installed nothing.
+  The guard adds mutation `npm-latest-must-be-installable` (121 guards). Moving the
+  registry tag itself is a separate, manual `npm dist-tag` step.
+
 ### Changed
 
 - The README is rewritten in plain English: one-sentence description, a copy-paste

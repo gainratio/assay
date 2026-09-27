@@ -492,6 +492,73 @@ def test_should_fail_closed_on_cross_channel_registry_state() -> None:
         guard.npm_publish_tag("1.2.3", {"latest": "1.2.4-dev.0"})
 
 
+_PLACEHOLDER_RECORD: dict[str, object] = {
+    "name": "@edgeproc/assay",
+    "version": "0.0.0-bootstrap.0",
+    "dist": {"fileCount": 3},
+}
+
+
+def _real_record(version: str) -> dict[str, object]:
+    return {
+        "name": "@edgeproc/assay",
+        "version": version,
+        "main": "./dist/index.js",
+        "exports": {".": {"import": "./dist/index.js"}},
+        "dist": {"fileCount": 25},
+    }
+
+
+def _package_document(tags: dict[str, str]) -> dict[str, object]:
+    versions: dict[str, object] = {"0.0.0-bootstrap.0": _PLACEHOLDER_RECORD}
+    for version in ("0.5.0-dev.3", "0.5.0-dev.4", "0.4.0", "0.5.0"):
+        versions[version] = _real_record(version)
+    return {"name": "@edgeproc/assay", "dist-tags": tags, "versions": versions}
+
+
+def test_should_refuse_a_publish_that_leaves_latest_on_the_bootstrap_placeholder() -> None:
+    # Given the observed 2026-09 registry state: a prerelease just landed on `next`
+    # while `latest` still names the empty 0.0.0-bootstrap.0 trusted-publishing stub
+    verifier = _load_module("scripts.verify_published_release")
+    package = _package_document(
+        {
+            "bootstrap": "0.0.0-bootstrap.0",
+            "latest": "0.0.0-bootstrap.0",
+            "next": "0.5.0-dev.4",
+        }
+    )
+    # When post-publish verification checks the tags
+    # Then a plain `npm install @edgeproc/assay` would get nothing, so it fails closed
+    with pytest.raises(ValueError, match="npm latest does not identify an installable release"):
+        verifier._verify_tags(package, "0.5.0-dev.4", "next", "next", True)
+
+
+def test_should_refuse_latest_pointing_at_a_version_the_registry_does_not_list() -> None:
+    # Given a latest tag naming a version with no registry record
+    verifier = _load_module("scripts.verify_published_release")
+    package = _package_document({"latest": "9.9.9", "next": "0.5.0-dev.4"})
+    # Then the default install target cannot be proven real
+    with pytest.raises(ValueError, match="npm latest does not identify an installable release"):
+        verifier._verify_tags(package, "0.5.0-dev.4", "next", "next", True)
+
+
+def test_should_accept_a_prerelease_publish_when_latest_is_a_real_release() -> None:
+    # Given latest on an installable release and next on the new prerelease
+    verifier = _load_module("scripts.verify_published_release")
+    package = _package_document({"latest": "0.5.0-dev.3", "next": "0.5.0-dev.4"})
+    # Then verification accepts the state (no exception)
+    verifier._verify_tags(package, "0.5.0-dev.4", "next", "next", True)
+
+
+def test_should_refuse_a_stable_publish_that_leaves_latest_on_an_older_release() -> None:
+    # Given a stable 0.5.0 publish whose latest tag still names 0.4.0
+    verifier = _load_module("scripts.verify_published_release")
+    package = _package_document({"latest": "0.4.0"})
+    # Then the default channel moving backward is a permanent failure
+    with pytest.raises(ValueError, match="npm channel moved backward or across channels"):
+        verifier._verify_tags(package, "0.5.0", "latest", "latest", True)
+
+
 def test_should_treat_only_authoritative_404_as_registry_absence(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -523,11 +590,12 @@ def test_should_define_one_exact_mutation_set_across_both_runtimes() -> None:
     names = tuple(mutation.name for mutation in harness.MUTATIONS)
     runners = {mutation.runner for mutation in harness.MUTATIONS}
     # Then the set is non-vacuous, unique, scoring-only, and cross-runtime
-    assert len(names) == 120
+    assert len(names) == 121
     assert len(names) == len(set(names))
     assert runners == {"pytest", "vitest"}
     assert sum(mutation.runner == "vitest" for mutation in harness.MUTATIONS) == 31
     assert "npm-release-quarantine-is-24h" in names
+    assert "npm-latest-must-be-installable" in names
     assert all("envelope" not in name and "ledger" not in name for name in names)
     assert all(not mutation.target.startswith("src/avow/") for mutation in harness.MUTATIONS)
     source = Path("scripts/mutation_harness.py").read_text(encoding="utf-8")
