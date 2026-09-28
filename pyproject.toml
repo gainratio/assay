@@ -35,7 +35,7 @@ metrics = [
     "ir-measures>=0.4.3",
 ]
 cli = [
-    "typer>=0.27",
+    "typer>=0.27.2",
 ]
 
 [dependency-groups]
