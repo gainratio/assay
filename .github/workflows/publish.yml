@@ -18,8 +18,21 @@ jobs:
     environment: npm-release
     permissions:
       actions: read # Download only the triggering candidate artifact.
+      contents: read # Lineage proof reads compare/ and branches/main.
       id-token: write # Mint the short-lived PyPI publishing identity.
     steps:
+      # A dispatch on a TAG named `main` passes the `if` above. The central lineage proof
+      # (hseshadr/ci#49) requires a successful release-candidate.yml run whose SHA is on main.
+      - uses: dagger/dagger-for-github@496f1b3d8b0d823834c13e67cf8a8e08ca3b9602 # v8.4.0
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RUN_ID: ${{ github.event.workflow_run.id }}
+          HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
+        with:
+          version: "0.21.8"
+          verb: call
+          module: github.com/hseshadr/ci/modules/portfolio-foundation@3de1c4bef2558fd6610b6dda1504b657de7a954d
+          args: release-lineage --github-token=env:GH_TOKEN --repository="$GITHUB_REPOSITORY" --run-id="$RUN_ID" --head-sha="$HEAD_SHA" --publish-run-id="$GITHUB_RUN_ID"
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
           name: assay-${{ github.event.workflow_run.head_sha }}
@@ -52,8 +65,21 @@ jobs:
     environment: npm-release
     permissions:
       actions: read # Download only the triggering candidate artifact.
+      contents: read # Lineage proof reads compare/ and branches/main.
       id-token: write # Pass typed OIDC request values to Dagger's npm publisher.
     steps:
+      # A dispatch on a TAG named `main` passes the `if` above. The central lineage proof
+      # (hseshadr/ci#49) requires a successful release-candidate.yml run whose SHA is on main.
+      - uses: dagger/dagger-for-github@496f1b3d8b0d823834c13e67cf8a8e08ca3b9602 # v8.4.0
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RUN_ID: ${{ github.event.workflow_run.id }}
+          HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
+        with:
+          version: "0.21.8"
+          verb: call
+          module: github.com/hseshadr/ci/modules/portfolio-foundation@3de1c4bef2558fd6610b6dda1504b657de7a954d
+          args: release-lineage --github-token=env:GH_TOKEN --repository="$GITHUB_REPOSITORY" --run-id="$RUN_ID" --head-sha="$HEAD_SHA" --publish-run-id="$GITHUB_RUN_ID"
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
           name: assay-${{ github.event.workflow_run.head_sha }}

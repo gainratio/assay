@@ -97,13 +97,14 @@ def test_should_publish_pypi_only_after_dagger_validates_the_exact_candidate() -
 
     # Then
     assert actions == [
+        "dagger/dagger-for-github",
         "actions/download-artifact",
         "dagger/dagger-for-github",
         "pypa/gh-action-pypi-publish",
     ]
-    assert steps[1]["id"] == "plan"
-    assert steps[2]["if"] == "steps.plan.outputs.output == 'true'"
-    assert steps[2]["with"] == {
+    assert steps[2]["id"] == "plan"
+    assert steps[3]["if"] == "steps.plan.outputs.output == 'true'"
+    assert steps[3]["with"] == {
         "packages-dir": "candidate/release/python",
         "attestations": "true",
         "print-hash": "true",
@@ -120,7 +121,7 @@ def test_should_publish_npm_only_inside_the_source_free_dagger_function() -> Non
     arguments = str(dagger["with"])
 
     # Then
-    assert len(steps) == 2
+    assert len(steps) == 3
     assert "publish-npm --candidate=candidate" in arguments
     assert '--expected-sha="$HEAD_SHA"' in arguments
     assert dagger["env"] == {"HEAD_SHA": "${{ github.event.workflow_run.head_sha }}"}

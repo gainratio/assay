@@ -661,5 +661,6 @@ def test_should_reduce_the_total_dagger_and_workflow_surface() -> None:
     # When
     lines = sum(len(path.read_text(encoding="utf-8").splitlines()) for path in paths)
 
-    # Then
-    assert 400 <= lines <= 700
+    # Then (budget raised from 700 to 720 for the two central lineage steps in publish.yml,
+    # hseshadr/ci#49: required publisher surface, not new repository logic)
+    assert 400 <= lines <= 720

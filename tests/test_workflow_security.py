@@ -248,9 +248,12 @@ def test_should_keep_both_privileged_publishers_source_free() -> None:
     assert commands == []
     assert all(job["environment"] == "npm-release" for job in publishers)
     assert all(
+        # Widened contract (was actions:read + id-token:write only): the lineage proof
+        # reads `compare/` and `branches/main`, which need contents:read.
         _mapping(job["permissions"])
         == {
             "actions": "read",
+            "contents": "read",
             "id-token": "write",
         }
         for job in publishers
@@ -270,10 +273,58 @@ def test_should_bind_download_and_remote_dagger_to_the_candidate_run_identity() 
             "github-token": "${{ github.token }}",
             "run-id": "${{ github.event.workflow_run.id }}",
         }
-        dagger_step = _action("dagger/dagger-for-github", job)
+        dagger_step = _publisher_dagger(job)
         assert _with(dagger_step)["module"] == (
             "github.com/hseshadr/assay@${{ github.event.workflow_run.head_sha }}"
         )
+
+
+#: The central lineage proof (hseshadr/ci#49), pinned at a literal hseshadr/ci commit.
+LINEAGE_MODULE = re.compile(r"^github\.com/hseshadr/ci/modules/portfolio-foundation@[0-9a-f]{40}$")
+#: Exact args: every value is a quoted env var bound to the triggering run, so a
+#: hard-coded run id or SHA cannot make the proof about a different run.
+LINEAGE_ARGS = (
+    'release-lineage --github-token=env:GH_TOKEN --repository="$GITHUB_REPOSITORY" '
+    '--run-id="$RUN_ID" --head-sha="$HEAD_SHA" --publish-run-id="$GITHUB_RUN_ID"'
+)
+LINEAGE_ENV = {
+    "GH_TOKEN": "${{ github.token }}",
+    "RUN_ID": "${{ github.event.workflow_run.id }}",
+    "HEAD_SHA": "${{ github.event.workflow_run.head_sha }}",
+}
+
+
+def _is_lineage(step: dict[str, object]) -> bool:
+    return str(_with(step).get("module", "")).startswith(
+        "github.com/hseshadr/ci/modules/portfolio-foundation@"
+    )
+
+
+def _publisher_dagger(job: dict[str, object]) -> dict[str, object]:
+    matches = [
+        step
+        for step in _steps(job)
+        if str(step.get("uses", "")).startswith("dagger/dagger-for-github@")
+        and not _is_lineage(step)
+    ]
+    assert len(matches) == 1
+    return matches[0]
+
+
+@pytest.mark.parametrize("name", ["publish-python", "publish-npm"])
+def test_should_prove_candidate_lineage_before_any_publisher_touches_an_artifact(
+    name: str,
+) -> None:
+    # Given the first step of each publisher. The job `if` (head_branch == default_branch)
+    # is satisfied by a dispatch on a TAG named `main`, so this proof must run first.
+    lineage = _steps(_job(_workflow("publish.yml"), name))[0]
+    invocation = dict(_with(lineage))
+
+    # Then it is the central release-lineage call, fed only through quoted env values
+    assert str(lineage["uses"]).startswith("dagger/dagger-for-github@")
+    assert _mapping(lineage.get("env")) == LINEAGE_ENV
+    assert LINEAGE_MODULE.fullmatch(str(invocation.pop("module")))
+    assert invocation == {"version": "0.21.8", "verb": "call", "args": LINEAGE_ARGS}
 
 
 def test_should_gate_publishers_on_successful_manual_default_branch_candidate() -> None:

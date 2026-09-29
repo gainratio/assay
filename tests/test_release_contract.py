@@ -1109,16 +1109,18 @@ def test_should_keep_registry_jobs_free_of_source_execution_and_broad_secret_sco
                 "git ",
             )
         )
-        assert job["permissions"] == {"actions": "read", "id-token": "write"}
+        # Widened contract: the lineage proof reads compare/ and branches/main (contents:read).
+        assert job["permissions"] == {"actions": "read", "contents": "read", "id-token": "write"}
         assert job["environment"] == "npm-release"
         assert "secrets." not in source
     assert [step.get("uses", "").split("@")[0] for step in jobs["publish-python"]["steps"]] == [
+        "dagger/dagger-for-github",
         "actions/download-artifact",
         "dagger/dagger-for-github",
         "pypa/gh-action-pypi-publish",
     ]
     npm_source = json.dumps(jobs["publish-npm"]["steps"])
     assert npm_source.count("actions/download-artifact@") == 1
-    assert npm_source.count("dagger/dagger-for-github@") == 1
+    assert npm_source.count("dagger/dagger-for-github@") == 2  # lineage proof + publisher
     assert "actions/setup-node@" not in npm_source
     assert "NODE_AUTH_TOKEN" not in npm_source
