@@ -22,20 +22,20 @@ _PUBLIC_DOCS = (
     _ROOT / "ts" / "README.md",
     _ROOT / "docs" / "ARCHITECTURE.md",
     _ROOT / "docs" / "OPERATIONS.md",
+    _ROOT / "docs" / "GETTING_STARTED.md",
     _METHODS,
 )
 _TAGLINE = (
-    "Turns measurements on different scales into one score that shows its math "
-    "\N{EM DASH} for developers who must explain a score."
+    "A Python and TypeScript library that combines several measurements into one score "
+    "and shows exactly how it got there."
 )
 _STATUS = (
-    "> **Status:** `assay-engine` 0.5.0.dev3 and `@edgeproc/assay` 0.5.0-dev.3 are "
-    "the authorized prerelease pair, and both registries serve them."
+    "> **Status:** prerelease. The current versions are `assay-engine` 0.5.0.dev3 on PyPI "
+    "and `@edgeproc/assay` 0.5.0-dev.3 on npm. There is no stable release yet."
 )
 _OPTIONAL = (
-    "Assay computes scores; Avow seals evidence. They are separate products in separate "
-    "repositories, and neither imports or requires the other. The already-published `avow` "
-    "0.4.1 and `@edgeproc/avow` 0.4.1 artifacts remain unchanged."
+    "Assay only computes scores. Sealing evidence about a result is a separate project, "
+    "Avow, and neither package imports or requires the other."
 )
 _TS_OPTIONAL = (
     "Assay computes scores; Avow seals evidence. They are separate products and neither "
@@ -151,42 +151,39 @@ def test_should_make_one_install_line_the_first_runnable_block() -> None:
     blocks = _blocks(readme, "bash")
     # When a cold reader reaches the first runnable material
     # Then it is one pinned install line, and the artifact-backed demo stays one line
-    assert blocks[0] == "pip install assay-engine==0.5.0.dev3\n"
+    assert blocks[0] == "pip install assay-engine\n"
     assert "bash examples/run_composite.sh\n" in blocks
-    assert readme.index("## Try it in 60 seconds") < readme.index(f"```bash\n{blocks[0]}")
+    assert readme.index("## Try it\n") < readme.index(f"```bash\n{blocks[0]}")
 
 
-def test_should_order_explanation_and_limits_before_optional_integration() -> None:
+def test_should_order_example_explanation_and_limits_before_install() -> None:
     # Given the README text
     readme = _read(_README)
     required = (
-        "## Try it in 60 seconds",
+        "## Try it",
         "## How it works",
-        "### Source to artifact map",
-        "## What this proves / what it does not prove",
-        "### Run the Northstar example",
-        "### How the score is calculated",
-        "### What this proves",
-        "### What this does not prove",
+        "## What it does not do",
+        "## When to use something else",
         "## Install",
-        "## Usage & API",
-        "## Optional integration",
+        "## Develop",
     )
     # When the required sections are located
     positions = tuple(readme.index(f"\n{heading}\n") for heading in required)
-    # Then example, computation, proof scope, and architecture precede optional integration
+    # Then the real example and its honest limits come before setup detail
     assert positions == tuple(sorted(positions))
 
 
-def test_should_bound_all_cross_product_vocabulary_to_optional_integration() -> None:
-    # Given the README text before its optional integration section
+def test_should_bound_all_cross_product_vocabulary_to_one_limits_bullet() -> None:
+    # Given the README text
     readme = _read(_README)
-    opening = readme.split("## Optional integration", maxsplit=1)[0].lower()
-    # When product-boundary vocabulary is inspected
-    # Then scoring stands alone until the exact bounded integration paragraph
+    limits = readme.split("## What it does not do", maxsplit=1)[1].split("\n## ", maxsplit=1)[0]
+    # When product-boundary vocabulary is inspected outside the one boundary sentence
+    remainder = readme.replace(_OPTIONAL, "").lower()
+    # Then scoring stands alone, and the boundary is stated once, as a limit
     forbidden = r"\b(avow|writ|keys?|sign(?:ed|ing|ature)?s?|receipts?|ledgers?|envelopes?)\b"
-    assert re.search(forbidden, opening) is None
+    assert re.search(forbidden, remainder) is None
     assert readme.count(_OPTIONAL) == 1
+    assert f"- {_OPTIONAL}" in limits
 
 
 def test_should_define_all_methods_and_result_fields() -> None:
@@ -220,8 +217,8 @@ def test_should_document_legacy_python_composite_as_nonportable_compatibility() 
 
 
 def test_should_map_exactly_two_production_source_trees_to_artifacts() -> None:
-    # Given the README source-to-artifact diagram
-    readme = _read(_README)
+    # Given the architecture document's source-to-artifact diagram
+    readme = _read(_ROOT / "docs" / "ARCHITECTURE.md")
     mappings = tuple(line for line in readme.splitlines() if line.startswith(("src/", "ts/src/")))
     # When production mappings are separated from repository support files
     # Then the wheel and tarball each have one source tree and no third runtime package exists

@@ -9,7 +9,7 @@ import { describe, expect, it } from "vitest";
 const PACKAGE_ROOT = new URL("..", import.meta.url);
 const ARCHIVE_NAME = "edgeproc-assay-0.5.0-dev.3.tgz";
 const EXPECTED_ARCHIVE_SHA256 =
-  "df93545217880e646a2c7ffb3b67d7bf8cd6ebd9ef4a6115d5cf34e9e010dfd9";
+  "eb115cbd809762f43cf45212682144581f1f18cefa5208300251886a10d1b3ee";
 const OPTIONAL_INTEGRATION =
   "Assay computes scores; Avow seals evidence. They are separate products and neither requires the other.";
 const EXPECTED_MEMBERS = [

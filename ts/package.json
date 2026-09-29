@@ -5,7 +5,7 @@
     "access": "public"
   },
   "type": "module",
-  "description": "Turns measurements on different scales into one score that shows its math — for developers who must explain a score.",
+  "description": "A Python and TypeScript library that combines several measurements into one score and shows exactly how it got there.",
   "keywords": [
     "scoring",
     "normalization",

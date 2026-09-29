@@ -23,7 +23,7 @@ The mutation is read back off disk before the second run, so an edit that silent
 failed to apply can never be reported as a guard that held.
 
 The active release set covers the complete Assay Python and TypeScript scoring
-surfaces plus the dependency-quarantine policy.
+surfaces plus the dependency-quarantine policy and the npm `latest` install guard.
 
 Run it::
 
@@ -70,6 +70,7 @@ _SETTINGS = "src/assay/settings.py"
 _METRIC_VECTORS = "testdata/vectors/metrics.json"
 _COMPOSITION_VECTORS = "testdata/vectors/composition.json"
 _PNPM_WORKSPACE = "ts/pnpm-workspace.yaml"
+_PUBLISHED_VERIFIER = "scripts/verify_published_release.py"
 _TS_RANKING = "ts/src/ranking.ts"
 _TS_METRICS = "ts/src/metrics.ts"
 _TS_NORMALIZE = "ts/src/normalize.ts"
@@ -578,6 +579,27 @@ _MIXED_PRODUCT_MUTATIONS: tuple[Mutation, ...] = (
             "tests/test_supply_chain_policy.py::test_new_npm_releases_are_quarantined_for_a_day",
         ),
         edit=_replace_once("minimumReleaseAge: 1440", "minimumReleaseAge: 0"),
+    ),
+    # ----------------------------------------------------------------------------------
+    # Not a claim about assay's maths — a claim about what `npm install @edgeproc/assay`
+    # gets. The registry made the empty bootstrap stub `latest`; this post-publish check
+    # is what refuses to call a release verified while that is still true.
+    # ----------------------------------------------------------------------------------
+    Mutation(
+        name="npm-latest-must-be-installable",
+        claim="a publish cannot verify while npm latest names the empty bootstrap placeholder",
+        target=_PUBLISHED_VERIFIER,
+        guard=(
+            "tests/test_release_contract.py::"
+            "test_should_refuse_a_publish_that_leaves_latest_on_the_bootstrap_placeholder",
+            "tests/test_release_contract.py::"
+            "test_should_refuse_latest_pointing_at_a_version_the_registry_does_not_list",
+        ),
+        edit=_replace_once(
+            "    _verify_selected_tag(tags, version, selected, published)\n"
+            "    _verify_default_install(payload, tags)\n",
+            "    _verify_selected_tag(tags, version, selected, published)\n",
+        ),
     ),
     # ----------------------------------------------------------------------------------
     # The TypeScript metrics face. These run under VITEST, not pytest. The claims
@@ -1638,11 +1660,11 @@ def _is_allowed_assay_target(target: str) -> bool:
 
 
 def _is_active_assay_mutation(mutation: Mutation) -> bool:
-    """Keep Assay scoring guards in both runtimes plus the exact quarantine guard."""
+    """Keep Assay scoring guards in both runtimes plus the two exact release guards."""
     return (
         mutation.runner == _VITEST
         or _is_allowed_assay_target(mutation.target)
-        or mutation.target == _PNPM_WORKSPACE
+        or mutation.target in (_PNPM_WORKSPACE, _PUBLISHED_VERIFIER)
     )
 
 

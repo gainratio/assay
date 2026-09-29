@@ -218,6 +218,21 @@ def _verify_tags(
     if not guard.dist_tag_is_current_or_newer(version, current):
         raise ValueError("npm channel moved backward or across channels")
     _verify_selected_tag(tags, version, selected, published)
+    _verify_default_install(payload, tags)
+
+
+def _verify_default_install(payload: object, tags: dict[str, object]) -> None:
+    """`npm install @edgeproc/assay` resolves `latest`; it must name a real, importable release.
+
+    The registry assigns `latest` to a package's first version whatever `--tag` says, so the
+    0.0.0-bootstrap.0 trusted-publishing stub became `latest`, and prereleases only move `next`.
+    A version record without `exports` (the stub has none) installs nothing usable.
+    """
+    latest = _tag_value(tags, "latest")
+    versions = guard._mapping(guard._mapping(payload).get("versions"))
+    record = versions.get(latest) if latest is not None else None
+    if not isinstance(record, dict) or "exports" not in record:
+        raise ValueError("npm latest does not identify an installable release")
 
 
 def _verify_selected_tag(
