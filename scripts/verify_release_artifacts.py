@@ -20,7 +20,7 @@ _PYTHON_PRERELEASE = re.compile(r"^(\d+\.\d+\.\d+)\.dev(\d+)$")
 _ARGUMENT_COUNT = 2
 _MIN_TAR_PARTS = 2
 _NODE_PROBE = """
-import { compose, parseRequest } from '@edgeproc/assay';
+import { compose, parseRequest } from '@gainratio/assay';
 const request = parseRequest({method:'minimum',method_version:'artifact-v1',components:[
   {id:'a',label:'A',value:60,scale:{minimum:0,maximum:100,direction:'higher_is_better'},interval:null,weight:null},
   {id:'b',label:'B',value:80,scale:{minimum:0,maximum:100,direction:'higher_is_better'},interval:null,weight:null}],clamp:'reject'});
@@ -29,7 +29,7 @@ if (result.score !== 0.6 || result.selected_component_id !== 'a') {
   throw new Error('composition mismatch');
 }
 for (const path of ['receipt','keys','canonical','ledger','writ']) {
-  try { await import(`@edgeproc/assay/${path}`); throw new Error('legacy subpath resolved'); }
+  try { await import(`@gainratio/assay/${path}`); throw new Error('legacy subpath resolved'); }
   catch (error) {
     if (error instanceof Error && error.message === 'legacy subpath resolved') throw error;
   }
@@ -112,7 +112,7 @@ def _expected_artifacts(root: Path, python_version: str, npm_version: str) -> Ar
     return Artifacts(
         wheel=root / "python" / f"assay_engine-{python_version}-py3-none-any.whl",
         sdist=root / "python" / f"assay_engine-{python_version}.tar.gz",
-        npm=root / "npm" / f"edgeproc-assay-{npm_version}.tgz",
+        npm=root / "npm" / f"gainratio-assay-{npm_version}.tgz",
     )
 
 
@@ -176,7 +176,7 @@ def _validate_metadata(artifacts: Artifacts) -> tuple[Identity, Identity]:
     npm = _npm_identity(artifacts.npm)
     if wheel != sdist or wheel.name != "assay-engine":
         raise ValueError("Python artifact metadata does not match")
-    if npm.name != "@edgeproc/assay" or npm.version != _npm_spelling(wheel.version):
+    if npm.name != "@gainratio/assay" or npm.version != _npm_spelling(wheel.version):
         raise ValueError("Python and npm artifact metadata does not match")
     return wheel, npm
 

@@ -30,8 +30,8 @@ _TAGLINE = (
     "and shows exactly how it got there."
 )
 _STATUS = (
-    "> **Status:** prerelease. The current versions are `assay-engine` 0.5.0.dev3 on PyPI "
-    "and `@edgeproc/assay` 0.5.0-dev.3 on npm. There is no stable release yet."
+    "> **Status:** prerelease. The current versions are `assay-engine` 0.5.0.dev4 on PyPI "
+    "and `@gainratio/assay` 0.5.0-dev.4 on npm. There is no stable release yet."
 )
 _OPTIONAL = (
     "Assay only computes scores. Sealing evidence about a result is a separate project, "
@@ -109,7 +109,7 @@ def _typecheck_typescript(
 ) -> subprocess.CompletedProcess[str]:
     module = (_ROOT / "ts" / "src" / "index.js").as_posix()
     target = tmp_path / f"example-{index}.ts"
-    target.write_text(source.replace('"@edgeproc/assay"', f'"{module}"'), encoding="utf-8")
+    target.write_text(source.replace('"@gainratio/assay"', f'"{module}"'), encoding="utf-8")
     command = [
         "pnpm",
         "--dir",
@@ -142,7 +142,7 @@ def test_should_open_with_exact_product_identity_and_status() -> None:
     assert _STATUS in readme
     assert readme.index(_TAGLINE) < readme.index("## Install\n") < readme.index(_STATUS)
     assert "`pip install assay-engine`" in readme
-    assert "`npm install @edgeproc/assay`" in readme
+    assert "`npm install @gainratio/assay`" in readme
 
 
 def test_should_make_one_install_line_the_first_runnable_block() -> None:
@@ -224,7 +224,7 @@ def test_should_map_exactly_two_production_source_trees_to_artifacts() -> None:
     # Then the wheel and tarball each have one source tree and no third runtime package exists
     assert mappings == (
         "src/assay/  ──> assay-engine wheel ──> import assay",
-        'ts/src/     ──> @edgeproc/assay npm tarball ──> import "@edgeproc/assay"',
+        'ts/src/     ──> @gainratio/assay npm tarball ──> import "@gainratio/assay"',
     )
     assert all(f"`{name}/`" in readme for name in ("examples", "docs", "tests", "testdata"))
 

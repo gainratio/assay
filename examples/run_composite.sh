@@ -69,9 +69,9 @@ run_step node-install env PATH="$NODE22_PATH" "$NODE22" "$PNPM_JS" --dir "$TS_CO
   install --frozen-lockfile
 run_step node-pack env PATH="$NODE22_PATH" "$NODE22" "$PNPM_JS" --dir "$TS_COPY" pack \
   --pack-destination "$ARTIFACTS"
-TARBALLS=("$ARTIFACTS"/edgeproc-assay-*.tgz)
+TARBALLS=("$ARTIFACTS"/gainratio-assay-*.tgz)
 if [[ ${#TARBALLS[@]} -ne 1 || ! -f ${TARBALLS[0]} ]]; then
-  echo "Expected exactly one @edgeproc/assay tarball" >&2
+  echo "Expected exactly one @gainratio/assay tarball" >&2
   exit 1
 fi
 run_step node-normalize "$NODE22" "$TS_COPY/scripts/normalize-package-archive.mjs" \
@@ -88,7 +88,7 @@ run_step node-package-install "$NODE22" "$NPM_JS" install --prefix "$NODE_APP" \
   --ignore-scripts --no-audit --no-fund "${TARBALLS[0]}"
 cat >"$NODE_APP/compose.mjs" <<'JAVASCRIPT'
 import { readFileSync, writeFileSync } from "node:fs";
-import { compose, parseRequest } from "@edgeproc/assay";
+import { compose, parseRequest } from "@gainratio/assay";
 
 const [requestPath, resultPath] = process.argv.slice(2);
 const request = parseRequest(JSON.parse(readFileSync(requestPath, "utf8")));

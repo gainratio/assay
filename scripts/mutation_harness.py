@@ -581,7 +581,7 @@ _MIXED_PRODUCT_MUTATIONS: tuple[Mutation, ...] = (
         edit=_replace_once("minimumReleaseAge: 1440", "minimumReleaseAge: 0"),
     ),
     # ----------------------------------------------------------------------------------
-    # Not a claim about assay's maths — a claim about what `npm install @edgeproc/assay`
+    # Not a claim about assay's maths — a claim about what `npm install @gainratio/assay`
     # gets. The registry made the empty bootstrap stub `latest`; this post-publish check
     # is what refuses to call a release verified while that is still true.
     # ----------------------------------------------------------------------------------

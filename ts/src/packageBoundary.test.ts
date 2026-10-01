@@ -24,8 +24,8 @@ describe("the public Assay package boundary", () => {
   it("uses the authorized Assay prerelease identity with no runtime dependencies", async () => {
     const manifest = await readManifest();
 
-    expect(manifest.name).toBe("@edgeproc/assay");
-    expect(manifest.version).toBe("0.5.0-dev.3");
+    expect(manifest.name).toBe("@gainratio/assay");
+    expect(manifest.version).toBe("0.5.0-dev.4");
     expect(manifest.dependencies ?? {}).toEqual({});
   });
 

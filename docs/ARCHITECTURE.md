@@ -39,7 +39,7 @@ Exactly two production source trees ship:
 
 ```text
 src/assay/  ──> assay-engine wheel ──> import assay
-ts/src/     ──> @edgeproc/assay npm tarball ──> import "@edgeproc/assay"
+ts/src/     ──> @gainratio/assay npm tarball ──> import "@gainratio/assay"
 ```
 
 - `examples/` demonstrates installed artifacts.
@@ -111,7 +111,7 @@ error codes instead of leaking dependency exceptions.
 
 ## TypeScript package
 
-The `@edgeproc/assay` tarball ships only compiled `dist/` output and has no runtime
+The `@gainratio/assay` tarball ships only compiled `dist/` output and has no runtime
 dependencies. Package-root exports provide strict request/result parsers, normalization,
 the three combiners, stable errors, and a smaller set of binary and ranking calculators.
 
@@ -149,8 +149,8 @@ boundary.
   input values.
 - **Verify a release:** both registries publish build provenance from this repository's
   release workflow. Check npm with
-  `npm view @edgeproc/assay@0.5.0-dev.3 dist.attestations`, and PyPI at
-  `https://pypi.org/integrity/assay-engine/0.5.0.dev3/assay_engine-0.5.0.dev3-py3-none-any.whl/provenance`.
+  `npm view @gainratio/assay@0.5.0-dev.4 dist.attestations`, and PyPI at
+  `https://pypi.org/integrity/assay-engine/0.5.0.dev4/assay_engine-0.5.0.dev4-py3-none-any.whl/provenance`.
 
 ## Cross-language example: build both packages and compare
 
