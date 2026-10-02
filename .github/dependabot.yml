@@ -8,6 +8,11 @@ version: 2
 # The version comment beside each pin must name the EXACT version (`# v9.0.0`), never a
 # floating major (`# v9`). Dependabot rewrites the SHA and the comment together, and a
 # floating-major comment turns into a lie the moment upstream re-points the tag.
+#
+# Every ecosystem is grouped (`patterns: ["*"]`) so each weekly run opens ONE PR per
+# ecosystem instead of one PR per dependency. Python uses the `uv` ecosystem, not `pip`:
+# `pip` widened pyproject ranges without relocking uv.lock, so its bumps were never
+# installed or tested under the locked environment.
 updates:
   - package-ecosystem: github-actions
     directory: /
@@ -21,6 +26,9 @@ updates:
     open-pull-requests-limit: 5
     commit-message:
       prefix: "chore(ci)"
+    groups:
+      actions:
+        patterns: ["*"]
     labels:
       - dependencies
       - github-actions
@@ -36,10 +44,13 @@ updates:
     open-pull-requests-limit: 5
     commit-message:
       prefix: "chore(deps)"
+    groups:
+      npm:
+        patterns: ["*"]
     labels:
       - dependencies
       - npm
-  - package-ecosystem: pip
+  - package-ecosystem: uv
     directory: /
     schedule:
       interval: weekly
@@ -51,6 +62,9 @@ updates:
     open-pull-requests-limit: 5
     commit-message:
       prefix: "chore(deps)"
+    groups:
+      python:
+        patterns: ["*"]
     labels:
       - dependencies
       - python

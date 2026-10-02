@@ -28,14 +28,14 @@ metrics = [
     "pydantic-settings>=2.11",
     "scikit-learn>=1.9",  # precision/recall/F1, PR-AUC, ROC-AUC, Brier
     "scipy>=1.18",        # scipy.stats.bootstrap confidence intervals
-    "numpy>=2.5",         # array math shared by sklearn + scipy
+    "numpy>=2.5.3",       # array math shared by sklearn + scipy
     # trec_eval's own arithmetic for the ranking face (nDCG, AP, P@k, R@k, RR). Exactly
     # one transitive dependency — pytrec-eval-terrier, the C++ binding to the reference
     # implementation — whose own deps are numpy + scipy, already pinned right above.
     "ir-measures>=0.4.3",
 ]
 cli = [
-    "typer>=0.27",
+    "typer>=0.27.2",
 ]
 
 [dependency-groups]
@@ -45,7 +45,7 @@ dev = [
     "pip-audit==2.10.1",
     "pytest>=9.1.1",
     "pytest-cov>=6.0",
-    "mypy>=2.2.0",
+    "mypy>=2.3.1",
     "ruff>=0.15.21",
     "xenon>=0.9",
     "radon>=6.0",
