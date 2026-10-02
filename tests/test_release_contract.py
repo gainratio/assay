@@ -277,7 +277,7 @@ def _npm_attestation(
         "predicateType": "https://slsa.dev/provenance/v1",
         "subject": [
             {
-                "name": f"pkg:npm/%40edgeproc/assay@{tag.removeprefix('v')}",
+                "name": f"pkg:npm/%40gainratio/assay@{tag.removeprefix('v')}",
                 "digest": {"sha512": subject_sha512},
             }
         ],
@@ -356,7 +356,7 @@ def test_should_bind_npm_provenance_to_default_branch_workflow_and_exact_sha(
 ) -> None:
     # Given exact local bytes and an official-shaped npm provenance statement
     guard = _load_guard()
-    tarball = tmp_path / "edgeproc-assay.tgz"
+    tarball = tmp_path / "gainratio-assay.tgz"
     tarball.write_bytes(b"assay-npm")
     metadata = _npm_metadata(tarball)
     sha = "a" * 40
@@ -375,7 +375,7 @@ def test_should_reject_npm_provenance_bound_to_another_run(
 ) -> None:
     # Given exact bytes but provenance for another tag or commit
     guard = _load_guard()
-    tarball = tmp_path / "edgeproc-assay.tgz"
+    tarball = tmp_path / "gainratio-assay.tgz"
     tarball.write_bytes(b"assay-npm")
     subject_sha512 = hashlib.sha512(tarball.read_bytes()).hexdigest()
     attestation = _npm_attestation(tag=tag, sha=sha, subject_sha512=subject_sha512)
@@ -389,7 +389,7 @@ def test_should_reject_npm_provenance_bound_to_another_run(
 def test_should_reject_npm_provenance_from_the_old_tag_trigger(tmp_path: Path) -> None:
     # Given exact bytes and SHA from the retired tag-triggered publisher
     guard = _load_guard()
-    tarball = tmp_path / "edgeproc-assay.tgz"
+    tarball = tmp_path / "gainratio-assay.tgz"
     tarball.write_bytes(b"assay-npm")
     sha = "a" * 40
     digest = hashlib.sha512(tarball.read_bytes()).hexdigest()
@@ -473,6 +473,34 @@ def test_should_select_a_nondefault_tag_for_out_of_order_publication(
     assert guard.npm_publish_tag(version, tags) == expected
 
 
+_BOOTSTRAP_TAGS: dict[str, object] = {
+    "bootstrap": "0.0.0-bootstrap.0",
+    "latest": "0.0.0-bootstrap.0",
+}
+
+
+@pytest.mark.parametrize(
+    ("version", "expected"),
+    [("0.5.0", "latest"), ("0.5.0-dev.4", "next")],
+)
+def test_should_publish_over_the_bootstrap_placeholder_when_the_name_is_new(
+    version: str, expected: str
+) -> None:
+    # Given a freshly claimed name: npm made the 0.0.0-bootstrap.0 stub `latest`
+    guard = _load_guard()
+    # When the first real release plans its tag
+    # Then the stub counts as no release on that channel, not as a corrupt channel
+    assert guard.npm_publish_tag(version, dict(_BOOTSTRAP_TAGS)) == expected
+
+
+def test_should_still_refuse_an_unparseable_latest_that_is_not_the_placeholder() -> None:
+    # Given latest pointing at some other non-release version string
+    guard = _load_guard()
+    # Then only the exact bootstrap stub is excused
+    with pytest.raises(ValueError, match="not valid SemVer"):
+        guard.npm_publish_tag("0.5.0", {"latest": "0.0.0-bootstrap.1"})
+
+
 def test_should_reject_a_version_specific_tag_collision() -> None:
     # Given an out-of-order release whose deterministic nondefault tag is occupied
     guard = _load_guard()
@@ -493,7 +521,7 @@ def test_should_fail_closed_on_cross_channel_registry_state() -> None:
 
 
 _PLACEHOLDER_RECORD: dict[str, object] = {
-    "name": "@edgeproc/assay",
+    "name": "@gainratio/assay",
     "version": "0.0.0-bootstrap.0",
     "dist": {"fileCount": 3},
 }
@@ -501,7 +529,7 @@ _PLACEHOLDER_RECORD: dict[str, object] = {
 
 def _real_record(version: str) -> dict[str, object]:
     return {
-        "name": "@edgeproc/assay",
+        "name": "@gainratio/assay",
         "version": version,
         "main": "./dist/index.js",
         "exports": {".": {"import": "./dist/index.js"}},
@@ -513,7 +541,7 @@ def _package_document(tags: dict[str, str]) -> dict[str, object]:
     versions: dict[str, object] = {"0.0.0-bootstrap.0": _PLACEHOLDER_RECORD}
     for version in ("0.5.0-dev.3", "0.5.0-dev.4", "0.4.0", "0.5.0"):
         versions[version] = _real_record(version)
-    return {"name": "@edgeproc/assay", "dist-tags": tags, "versions": versions}
+    return {"name": "@gainratio/assay", "dist-tags": tags, "versions": versions}
 
 
 def test_should_refuse_a_publish_that_leaves_latest_on_the_bootstrap_placeholder() -> None:
@@ -528,8 +556,18 @@ def test_should_refuse_a_publish_that_leaves_latest_on_the_bootstrap_placeholder
         }
     )
     # When post-publish verification checks the tags
-    # Then a plain `npm install @edgeproc/assay` would get nothing, so it fails closed
+    # Then a plain `npm install @gainratio/assay` would get nothing, so it fails closed
     with pytest.raises(ValueError, match="npm latest does not identify an installable release"):
+        verifier._verify_tags(package, "0.5.0-dev.4", "next", "next", True)
+
+
+def test_should_name_the_dist_tag_fix_when_latest_is_still_the_placeholder() -> None:
+    # Given the first prerelease on a new name, with latest still on the stub
+    verifier = _load_module("scripts.verify_published_release")
+    package = _package_document({"latest": "0.0.0-bootstrap.0", "next": "0.5.0-dev.4"})
+    # Then verification fails closed and says the one command that fixes it
+    fix = re.escape("npm dist-tag add @gainratio/assay@0.5.0-dev.4 latest")
+    with pytest.raises(ValueError, match=fix):
         verifier._verify_tags(package, "0.5.0-dev.4", "next", "next", True)
 
 
@@ -664,9 +702,9 @@ def _rewrite_manifest(root: Path) -> None:
 @pytest.mark.parametrize(
     "relative",
     [
-        "python/assay_engine-0.5.0.dev3-py3-none-any.whl",
-        "python/assay_engine-0.5.0.dev3.tar.gz",
-        "npm/edgeproc-assay-0.5.0-dev.3.tgz",
+        "python/assay_engine-0.5.0.dev4-py3-none-any.whl",
+        "python/assay_engine-0.5.0.dev4.tar.gz",
+        "npm/gainratio-assay-0.5.0-dev.4.tgz",
     ],
 )
 def test_should_reject_renamed_release_artifacts_even_with_a_new_manifest(
@@ -745,8 +783,8 @@ def _rewrite_wheel_dist_info(path: Path) -> None:
 @pytest.mark.parametrize(
     ("relative", "link_type"),
     [
-        ("python/assay_engine-0.5.0.dev3.tar.gz", tarfile.SYMTYPE),
-        ("npm/edgeproc-assay-0.5.0-dev.3.tgz", tarfile.LNKTYPE),
+        ("python/assay_engine-0.5.0.dev4.tar.gz", tarfile.SYMTYPE),
+        ("npm/gainratio-assay-0.5.0-dev.4.tgz", tarfile.LNKTYPE),
     ],
 )
 def test_should_reject_every_nonregular_tar_member(
@@ -767,8 +805,8 @@ def test_should_reject_every_nonregular_tar_member(
 @pytest.mark.parametrize(
     ("relative", "mode"),
     [
-        ("python/assay_engine-0.5.0.dev3.tar.gz", "sdist-root"),
-        ("npm/edgeproc-assay-0.5.0-dev.3.tgz", "npm-alias"),
+        ("python/assay_engine-0.5.0.dev4.tar.gz", "sdist-root"),
+        ("npm/gainratio-assay-0.5.0-dev.4.tgz", "npm-alias"),
     ],
 )
 def test_should_reject_noncanonical_or_wrong_root_tar_members(
@@ -843,7 +881,7 @@ def _served_payloads(root: Path) -> tuple[dict[str, object], dict[str, object], 
     downloads = {
         f"https://files.pythonhosted.org/{path.name}": path.read_bytes() for path in python_files
     }
-    npm_url = f"https://registry.npmjs.org/@edgeproc/assay/-/{npm.name}"
+    npm_url = f"https://registry.npmjs.org/@gainratio/assay/-/{npm.name}"
     downloads[npm_url] = npm.read_bytes()
     pypi = {
         "urls": [

@@ -60,7 +60,7 @@
       "id": "public-api",
       "type": "backend",
       "label": "Public Package APIs",
-      "sublabel": "assay / @edgeproc/assay",
+      "sublabel": "assay / @gainratio/assay",
       "tag": "two independent artifacts",
       "pos": [265, 300],
       "size": [180, 78],

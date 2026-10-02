@@ -17,7 +17,7 @@ NPM_SCRIPT = ROOT / "scripts/npm-publish.sh"
 PYPI_URL = "https://upload.pypi.org/legacy/"
 PYPI_API = "https://pypi.org/pypi/assay-engine/0.5.0.dev2/json"
 NPM_URL = "https://registry.npmjs.org/"
-NPM_PACKAGE_URL = f"{NPM_URL}%40edgeproc%2Fassay"
+NPM_PACKAGE_URL = f"{NPM_URL}%40gainratio%2Fassay"
 NPM_VERSION_URL = f"{NPM_PACKAGE_URL}/0.5.0-dev.2"
 FIXTURE_AUTH = "test-only-sentinel"
 BOOTSTRAP_BYTES = b"reviewed-bootstrap-archive"
@@ -114,7 +114,7 @@ args = sys.argv[1:]
 if args[0] == 'pack':
     root = pathlib.Path(args[1])
     destination = pathlib.Path(args[args.index('--pack-destination') + 1])
-    archive = destination / 'edgeproc-assay-0.0.0-bootstrap.0.tgz'
+    archive = destination / 'gainratio-assay-0.0.0-bootstrap.0.tgz'
     archive.write_bytes({BOOTSTRAP_BYTES!r})
     event = {{'command':'npm-pack','argv':args,'forced':forced,'lower':lower,
              'package':json.loads((root / 'package.json').read_text()),
@@ -150,7 +150,7 @@ def _fixture(tmp_path: Path, version: str = "0.5.0-dev.2") -> Fixture:
     python_version = version.replace("-dev.", ".dev")
     (release / "python" / f"assay_engine-{python_version}-py3-none-any.whl").write_bytes(b"wheel")
     (release / "python" / f"assay_engine-{python_version}.tar.gz").write_bytes(b"sdist")
-    (release / "npm" / f"edgeproc-assay-{version}.tgz").write_bytes(b"npm")
+    (release / "npm" / f"gainratio-assay-{version}.tgz").write_bytes(b"npm")
     (release / "SHA256SUMS").write_text("reviewed\n", encoding="utf-8")
     return _install_fakes(tmp_path, release)
 
@@ -220,10 +220,10 @@ def _npm_integrity(payload: bytes) -> str:
 
 
 def _npm_version_body(release: Path) -> str:
-    archive = release / "npm/edgeproc-assay-0.5.0-dev.2.tgz"
+    archive = release / "npm/gainratio-assay-0.5.0-dev.2.tgz"
     return json.dumps(
         {
-            "name": "@edgeproc/assay",
+            "name": "@gainratio/assay",
             "version": "0.5.0-dev.2",
             "dist": {"integrity": _npm_integrity(archive.read_bytes())},
         }
@@ -231,9 +231,9 @@ def _npm_version_body(release: Path) -> str:
 
 
 def _npm_package_body(version: str, integrity: str, tag: str) -> str:
-    record = {"name": "@edgeproc/assay", "version": version, "dist": {"integrity": integrity}}
+    record = {"name": "@gainratio/assay", "version": version, "dist": {"integrity": integrity}}
     return json.dumps(
-        {"name": "@edgeproc/assay", "dist-tags": {tag: version}, "versions": {version: record}}
+        {"name": "@gainratio/assay", "dist-tags": {tag: version}, "versions": {version: record}}
     )
 
 
@@ -245,7 +245,7 @@ def _bootstrap_body(integrity: str | None = None) -> str:
 def _conflicting_bootstrap_body(case: str) -> str:
     payload = json.loads(_bootstrap_body())
     if case == "additional-version":
-        payload["versions"]["1.0.0"] = {"name": "@edgeproc/assay", "version": "1.0.0"}
+        payload["versions"]["1.0.0"] = {"name": "@gainratio/assay", "version": "1.0.0"}
     elif case == "identity":
         payload["name"] = "@hostile/assay"
     elif case == "integrity":
@@ -595,7 +595,7 @@ def test_should_bootstrap_with_sanitized_config_and_verify_registry_state(tmp_pa
 def test_should_bootstrap_only_when_package_endpoint_is_authoritative_404(tmp_path: Path) -> None:
     # Given the npm package already exists, regardless of bootstrap version presence
     fixture = _fixture(tmp_path)
-    existing = json.dumps({"name": "@edgeproc/assay", "dist-tags": {}, "versions": {}})
+    existing = json.dumps({"name": "@gainratio/assay", "dist-tags": {}, "versions": {}})
     # When bootstrap publication is requested
     result = _run(
         fixture,

@@ -2,6 +2,21 @@
 
 ## [Unreleased]
 
+### Changed
+
+- **npm package renamed to `@gainratio/assay`; old name deprecated.** The next
+  prerelease, `0.5.0-dev.4` (Python `assay-engine` `0.5.0.dev4`), ships only as
+  `@gainratio/assay`. `@edgeproc/assay` `0.5.0-dev.3` and older keep installing.
+  Change `npm install @edgeproc/assay` to `npm install @gainratio/assay` and update
+  imports. No scoring change. The npm archive is now `gainratio-assay-<version>.tgz`
+  and its pinned SHA-256 is `5163e2b5…65bd3b25`. Python `assay-engine` moves to
+  `0.5.0.dev4` in lockstep with no code change.
+- The release guard treats the `0.0.0-bootstrap.0` stub that npm leaves on `latest`
+  for a freshly claimed name as "no release on that channel", so the first stable
+  release of `@gainratio/assay` replaces it instead of failing with "not valid
+  SemVer". Post-publish verification still fails closed while `latest` is the stub,
+  and now prints the exact `npm dist-tag add` command that fixes it.
+
 ### Fixed
 
 - Post-publish verification now fails when npm `latest` does not name an installable

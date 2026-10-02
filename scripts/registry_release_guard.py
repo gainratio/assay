@@ -27,6 +27,9 @@ _NOT_FOUND = 404
 _CORE = r"(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)"
 _NPM_VERSION = re.compile(rf"^{_CORE}(?:-dev\.(0|[1-9]\d*))?$")
 _REPOSITORY = "https://github.com/hseshadr/assay"
+# npm makes a package's first version `latest` whatever `--tag` says, so a freshly claimed
+# name has this trusted-publishing stub on `latest`. It is no release on any channel.
+BOOTSTRAP_VERSION = "0.0.0-bootstrap.0"
 _PYPI_REPOSITORY = "hseshadr/assay"
 _WORKFLOW = ".github/workflows/publish.yml"
 _PUBLISH_REF = "refs/heads/main"
@@ -223,7 +226,7 @@ def _statement_header_matches(statement: dict[str, object], identity: Provenance
 
 
 def _npm_subject_matches(statement: dict[str, object], identity: ProvenanceIdentity) -> bool:
-    expected = f"pkg:npm/%40edgeproc/assay@{identity.tag.removeprefix('v')}"
+    expected = f"pkg:npm/%40gainratio/assay@{identity.tag.removeprefix('v')}"
     subjects = (_mapping(item) for item in _sequence(statement.get("subject")))
     matching = (item for item in subjects if item.get("name") == expected)
     return any(
@@ -293,7 +296,7 @@ def version_specific_tag(version: str) -> str:
 def _channel_version(version: str, tags: dict[str, object]) -> str | None:
     channel = npm_dist_tag(version)
     current = tags.get(channel)
-    if current is None:
+    if current is None or current == BOOTSTRAP_VERSION:
         return None
     if not isinstance(current, str):
         raise ValueError("npm registry metadata is malformed")
@@ -479,7 +482,7 @@ def _npm_decision(
 
 def _npm_state(root: Path, version: str) -> ReleaseDecision:
     tarball = _npm_artifact(root, version)
-    encoded = urllib.parse.quote("@edgeproc/assay", safe="")
+    encoded = urllib.parse.quote("@gainratio/assay", safe="")
     payload = _fetch_json(f"https://registry.npmjs.org/{encoded}/{version}")
     tags = _npm_tags(_fetch_json(f"https://registry.npmjs.org/{encoded}"))
     channel = npm_dist_tag(version)

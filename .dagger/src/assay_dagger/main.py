@@ -49,7 +49,7 @@ SOURCE_EXCLUDES: Final = [
     "*.pem",
     "**/*.pem",
 ]
-NPM_ARCHIVE = re.compile(r"^edgeproc-assay-[0-9]+\.[0-9]+\.[0-9]+(?:-dev\.[0-9]+)?\.tgz$")
+NPM_ARCHIVE = re.compile(r"^gainratio-assay-[0-9]+\.[0-9]+\.[0-9]+(?:-dev\.[0-9]+)?\.tgz$")
 PYTHON_WHEEL = re.compile(
     r"^assay_engine-[0-9]+\.[0-9]+\.[0-9]+(?:\.dev[0-9]+)?-py3-none-any\.whl$"
 )
@@ -430,7 +430,7 @@ class Assay:
     @staticmethod
     def _channel_recheck(plan: NpmPlan) -> str:
         return (
-            "const u='https://registry.npmjs.org/%40edgeproc%2Fassay';"
+            "const u='https://registry.npmjs.org/%40gainratio%2Fassay';"
             "const r=await fetch(u);if(![200,404].includes(r.status))"
             "throw Error('registry unavailable');"
             "const t=r.status===404?{}:(await r.json())['dist-tags'];"

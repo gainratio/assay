@@ -7,9 +7,9 @@ import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 
 const PACKAGE_ROOT = new URL("..", import.meta.url);
-const ARCHIVE_NAME = "edgeproc-assay-0.5.0-dev.3.tgz";
+const ARCHIVE_NAME = "gainratio-assay-0.5.0-dev.4.tgz";
 const EXPECTED_ARCHIVE_SHA256 =
-  "eb115cbd809762f43cf45212682144581f1f18cefa5208300251886a10d1b3ee";
+  "5163e2b557c83a794d5a26272757602d7fed942c397dcd76eb6cb1dd65bd3b25";
 const OPTIONAL_INTEGRATION =
   "Assay computes scores; Avow seals evidence. They are separate products and neither requires the other.";
 const EXPECTED_MEMBERS = [
@@ -86,8 +86,8 @@ describe("the real npm artifact", () => {
       ) as Readonly<Record<string, unknown>>;
       const readme = run("tar", ["-xOzf", archive, "package/README.md"]);
       expect(manifest).toMatchObject({
-        name: "@edgeproc/assay",
-        version: "0.5.0-dev.3",
+        name: "@gainratio/assay",
+        version: "0.5.0-dev.4",
         type: "module",
         dependencies: {},
         exports: {
@@ -142,7 +142,7 @@ describe("the real npm artifact", () => {
       writeFileSync(
         join(destination, "verify.mjs"),
         `import { readFileSync } from "node:fs";
-import { compose, parseRequest, parseScoreResult } from "@edgeproc/assay";
+import { compose, parseRequest, parseScoreResult } from "@gainratio/assay";
 
 const vectors = JSON.parse(readFileSync(process.argv[2], "utf8"));
 const ids = [];
@@ -154,7 +154,7 @@ for (const vector of vectors) {
 }
 for (const path of ["receipt", "keys", "canonical", "ledger", "writ"]) {
   try {
-    await import(\`@edgeproc/assay/\${path}\`);
+    await import(\`@gainratio/assay/\${path}\`);
     throw new Error(\`legacy subpath resolved: \${path}\`);
   } catch (error) {
     if (error instanceof Error && error.message.startsWith("legacy subpath")) throw error;
