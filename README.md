@@ -72,13 +72,13 @@ you can later check that a replay used the same input.
    tag, because npm's default tag still points at an empty placeholder.
 
 ```bash
-npm install @edgeproc/assay@next
+npm install @gainratio/assay@next
 ```
 
 Save this as `laptop.mjs` and run `node laptop.mjs`:
 
 ```javascript
-import { compose, parseRequest } from "@edgeproc/assay";
+import { compose, parseRequest } from "@gainratio/assay";
 
 const measure = (name, value, worst, best, importance) => ({
   id: name, label: name, value, interval: null, weight: importance,
@@ -143,16 +143,16 @@ shared test cases.
 
 ## Install
 
-> **Status:** prerelease. The current versions are `assay-engine` 0.5.0.dev3 on PyPI and `@edgeproc/assay` 0.5.0-dev.3 on npm. There is no stable release yet.
+> **Status:** prerelease. The current versions are `assay-engine` 0.5.0.dev4 on PyPI and `@gainratio/assay` 0.5.0-dev.4 on npm. There is no stable release yet.
 
 ```bash
-pip install assay-engine==0.5.0.dev3
-npm install @edgeproc/assay@0.5.0-dev.3
+pip install assay-engine==0.5.0.dev4
+npm install @gainratio/assay@0.5.0-dev.4
 ```
 
 On PyPI the package is called `assay-engine`, but you import it as `assay`. Plain
 `pip install assay-engine` gets the prerelease today because no stable version exists.
-On npm, `npm install @edgeproc/assay` without a version installs an empty placeholder, so
+On npm, `npm install @gainratio/assay` without a version installs an empty placeholder, so
 always give the version or the `@next` tag.
 
 Extras for Python:

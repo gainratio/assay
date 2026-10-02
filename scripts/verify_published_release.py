@@ -26,6 +26,7 @@ _NOT_FOUND = 404
 _POLL_SECONDS = 10.0
 _PYPI_ROOT = "https://pypi.org"
 _NPM_ROOT = "https://registry.npmjs.org"
+_NPM_PACKAGE = "@gainratio/assay"
 _DOWNLOAD_HOSTS = frozenset({"files.pythonhosted.org", "registry.npmjs.org"})
 
 
@@ -222,7 +223,7 @@ def _verify_tags(
 
 
 def _verify_default_install(payload: object, tags: dict[str, object]) -> None:
-    """`npm install @edgeproc/assay` resolves `latest`; it must name a real, importable release.
+    """`npm install @gainratio/assay` resolves `latest`; it must name a real, importable release.
 
     The registry assigns `latest` to a package's first version whatever `--tag` says, so the
     0.0.0-bootstrap.0 trusted-publishing stub became `latest`, and prereleases only move `next`.
@@ -231,8 +232,19 @@ def _verify_default_install(payload: object, tags: dict[str, object]) -> None:
     latest = _tag_value(tags, "latest")
     versions = guard._mapping(guard._mapping(payload).get("versions"))
     record = versions.get(latest) if latest is not None else None
+    if latest == guard.BOOTSTRAP_VERSION:
+        raise ValueError(_placeholder_message(tags))
     if not isinstance(record, dict) or "exports" not in record:
         raise ValueError("npm latest does not identify an installable release")
+
+
+def _placeholder_message(tags: dict[str, object]) -> str:
+    target = _tag_value(tags, "next") or "<version>"
+    return (
+        "npm latest does not identify an installable release: it is still the "
+        f"{guard.BOOTSTRAP_VERSION} placeholder; run "
+        f"`npm dist-tag add {_NPM_PACKAGE}@{target} latest`"
+    )
 
 
 def _verify_selected_tag(
@@ -266,7 +278,7 @@ def _verify_once(
 ) -> None:
     python_version, npm_version = _source_versions()
     pypi = _read_json(f"{_PYPI_ROOT}/pypi/assay-engine/{python_version}/json", deadline)
-    encoded = urllib.parse.quote("@edgeproc/assay", safe="")
+    encoded = urllib.parse.quote(_NPM_PACKAGE, safe="")
     npm = _read_json(f"{_NPM_ROOT}/{encoded}/{npm_version}", deadline)
     _pypi_ready(reviewed, python_version, pypi, deadline)
     _npm_ready(reviewed, npm, os.environ["RELEASE_TAG"], os.environ["GITHUB_SHA"], deadline)
@@ -316,7 +328,7 @@ def main() -> int:
         print(str(error), file=sys.stderr)
         return 1
     python_version, npm_version = _source_versions()
-    print(f"verified registry bytes for assay {python_version} and @edgeproc/assay {npm_version}")
+    print(f"verified registry bytes for assay {python_version} and {_NPM_PACKAGE} {npm_version}")
     return 0
 
 

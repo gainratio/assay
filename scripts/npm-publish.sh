@@ -4,8 +4,8 @@ unset PS4
 set -euo pipefail
 
 readonly NPM_REGISTRY="https://registry.npmjs.org/"
-readonly NPM_PACKAGE="@edgeproc/assay"
-readonly NPM_PACKAGE_URL="https://registry.npmjs.org/%40edgeproc%2Fassay"
+readonly NPM_PACKAGE="@gainratio/assay"
+readonly NPM_PACKAGE_URL="https://registry.npmjs.org/%40gainratio%2Fassay"
 readonly BOOTSTRAP_VERSION="0.0.0-bootstrap.0"
 readonly POLL_ATTEMPTS=6
 readonly POLL_SECONDS=2
@@ -63,7 +63,7 @@ parse_arguments() {
 
 reject_manual_release() {
   if [[ "$publish" == true && "$mode" == release ]]; then
-    die "real @edgeproc/assay releases require the GitHub Actions OIDC workflow for provenance"
+    die "real @gainratio/assay releases require the GitHub Actions OIDC workflow for provenance"
   fi
 }
 
@@ -96,10 +96,10 @@ verify_snapshot() {
 select_release() {
   local archives filename number='(0|[1-9][0-9]*)'
   shopt -s nullglob
-  archives=("$snapshot_root"/npm/edgeproc-assay-*.tgz)
-  [[ ${#archives[@]} -eq 1 ]] || die "expected one reviewed @edgeproc/assay tarball"
+  archives=("$snapshot_root"/npm/gainratio-assay-*.tgz)
+  [[ ${#archives[@]} -eq 1 ]] || die "expected one reviewed @gainratio/assay tarball"
   release_archive="${archives[0]}"
-  filename="${release_archive##*/edgeproc-assay-}"
+  filename="${release_archive##*/gainratio-assay-}"
   release_version="${filename%.tgz}"
   [[ "$release_version" =~ ^${number}\.${number}\.${number}(-dev\.${number})?$ ]] ||
     die "malformed npm version: $release_version"
@@ -124,8 +124,8 @@ payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
 archive = pathlib.Path(sys.argv[2])
 expected = "sha512-" + base64.b64encode(hashlib.sha512(archive.read_bytes()).digest()).decode()
 identity = (payload.get("name"), payload.get("version"))
-if identity != ("@edgeproc/assay", sys.argv[3]) or payload.get("dist", {}).get("integrity") != expected:
-    raise SystemExit(f"@edgeproc/assay {sys.argv[3]} already exists with conflicting bytes")
+if identity != ("@gainratio/assay", sys.argv[3]) or payload.get("dist", {}).get("integrity") != expected:
+    raise SystemExit(f"@gainratio/assay {sys.argv[3]} already exists with conflicting bytes")
 PY
 }
 
@@ -144,10 +144,10 @@ expected = "sha512-" + base64.b64encode(hashlib.sha512(archive.read_bytes()).dig
 record = payload.get("versions", {}).get(sys.argv[3], {})
 identity = (payload.get("name"), record.get("name"), record.get("version"))
 tagged = payload.get("dist-tags", {}).get(sys.argv[4])
-if identity != ("@edgeproc/assay", "@edgeproc/assay", sys.argv[3]):
+if identity != ("@gainratio/assay", "@gainratio/assay", sys.argv[3]):
     raise SystemExit("npm package identity is malformed")
 if record.get("dist", {}).get("integrity") != expected:
-    raise SystemExit(f"@edgeproc/assay {sys.argv[3]} registry integrity conflicts")
+    raise SystemExit(f"@gainratio/assay {sys.argv[3]} registry integrity conflicts")
 if tagged != sys.argv[3]:
     raise SystemExit(f"expected {sys.argv[4]} dist-tag to identify {sys.argv[3]}")
 PY
@@ -165,7 +165,7 @@ versions = payload.get("versions", {})
 record = versions.get(version, {})
 identity = (payload.get("name"), record.get("name"), record.get("version"))
 tags = payload.get("dist-tags")
-if identity != ("@edgeproc/assay", "@edgeproc/assay", version):
+if identity != ("@gainratio/assay", "@gainratio/assay", version):
     raise SystemExit("bootstrap registry state conflicts with the required identity")
 if set(versions) != {version} or tags != {"bootstrap": version}:
     raise SystemExit("bootstrap registry state conflicts with the required package state")
@@ -208,7 +208,7 @@ check_release_state() {
 }
 
 print_guidance() {
-  echo "An npm granular write token can bootstrap @edgeproc/assay; export HARISH_NPM_TOKEN in the caller only with --publish."
+  echo "An npm granular write token can bootstrap @gainratio/assay; export HARISH_NPM_TOKEN in the caller only with --publish."
   echo "Trusted-publisher setup still needs account authentication and 2FA; bypass tokens cannot configure trust."
   echo "All real releases must use the OIDC workflow for provenance."
 }
@@ -226,7 +226,7 @@ write_bootstrap_package() {
   bootstrap_root="$runtime_root/bootstrap"
   mkdir -m 700 "$bootstrap_root"
   cat >"$bootstrap_root/package.json" <<'JSON'
-{"name":"@edgeproc/assay","version":"0.0.0-bootstrap.0","description":"Harmless bootstrap placeholder for configuring npm trusted publishing; do not install.","license":"MIT","files":["README.md","LICENSE"]}
+{"name":"@gainratio/assay","version":"0.0.0-bootstrap.0","description":"Harmless bootstrap placeholder for configuring npm trusted publishing; do not install.","license":"MIT","files":["README.md","LICENSE"]}
 JSON
   printf '%s\n' '# Bootstrap placeholder' '' 'Do not install. Real releases use OIDC trusted publishing.' >"$bootstrap_root/README.md"
   cp -- "$trusted_license" "$bootstrap_root/LICENSE"
@@ -237,7 +237,7 @@ pack_bootstrap() {
     NPM_CONFIG_REGISTRY="$NPM_REGISTRY" NPM_CONFIG_USERCONFIG=/dev/null \
     npm pack "$bootstrap_root" --pack-destination "$runtime_root" --json --dry-run=false \
     --provenance=false --ignore-scripts=true --registry "$NPM_REGISTRY" >/dev/null
-  bootstrap_archive="$runtime_root/edgeproc-assay-$BOOTSTRAP_VERSION.tgz"
+  bootstrap_archive="$runtime_root/gainratio-assay-$BOOTSTRAP_VERSION.tgz"
   [[ -f "$bootstrap_archive" && ! -L "$bootstrap_archive" ]] || die "npm bootstrap pack failed"
 }
 

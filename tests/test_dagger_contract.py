@@ -603,9 +603,9 @@ def test_should_reject_extra_material_inside_the_release_envelope() -> None:
         "publication/pypi.env",
         "publish-tools/npm-12.0.2.tgz",
         "release/SHA256SUMS",
-        "release/npm/edgeproc-assay-0.5.0-dev.3.tgz",
-        "release/python/assay_engine-0.5.0.dev3-py3-none-any.whl",
-        "release/python/assay_engine-0.5.0.dev3.tar.gz",
+        "release/npm/gainratio-assay-0.5.0-dev.4.tgz",
+        "release/python/assay_engine-0.5.0.dev4-py3-none-any.whl",
+        "release/python/assay_engine-0.5.0.dev4.tar.gz",
         "release/source.py",
     ]
     candidate = RecordingCandidate(entries, {})
