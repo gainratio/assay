@@ -238,8 +238,13 @@ class Assay:
         )
 
     def _identity(self, source: dagger.Directory, tag: str, commit_sha: str) -> dagger.Container:
+        # A dag.git commit tree has no refs/remotes/origin/main. Derive it from an
+        # independently fetched main branch, never from the release sha itself.
+        main = self._history("").filter(include=[".git", ".git/**"])
+        protected = self._repository(main.with_directory("/", source))
+        track = ["git", "update-ref", "refs/remotes/origin/main", "refs/heads/main"]
         command = ["uv", "run", "python", "scripts/verify_release_identity.py", tag, commit_sha]
-        return self._repository(source).with_exec(command)
+        return protected.with_exec(track).with_exec(command)
 
     def _artifact_container(self, source: dagger.Directory) -> dagger.Container:
         return self._repository(source).with_exec(

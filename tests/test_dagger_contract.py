@@ -550,6 +550,16 @@ def test_should_build_candidate_from_exact_history_and_record_registry_decisions
     assert "CANDIDATE-SHA256SUMS" in candidate
 
 
+def test_should_derive_protected_main_ref_from_independently_fetched_main_history() -> None:
+    # Given the identity step, whose script checks refs/remotes/origin/main
+    # When a commit tree from dag.git carries no refs/remotes/origin/main (run 37076229537)
+    identity = inspect.getsource(Assay._identity)
+
+    # Then the ref is derived from the separately fetched main branch, never from the release sha
+    assert 'self._history("")' in identity
+    assert '"refs/remotes/origin/main", "refs/heads/main"' in identity
+
+
 def test_should_accept_only_a_checksum_bound_candidate_plan() -> None:
     # Given
     sha = "a" * 40
