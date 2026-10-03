@@ -5,7 +5,7 @@
 
 ## Supported versions
 
-Assay's Python `0.5.0.dev4` and npm `0.5.0-dev.4` versions are the authorized prerelease pair for
+Assay's Python `0.5.0.dev5` and npm `0.5.0-dev.5` versions are the authorized prerelease pair for
 the future stable 0.5.0 line. Install only exact versions that both registries serve with provenance.
 Security fixes continue on `main` and may require a newer development release.
 
