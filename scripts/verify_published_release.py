@@ -167,6 +167,7 @@ def materialize_served_bundle(
     served: Path,
     pypi_payload: object,
     npm_payload: object,
+    *,
     fetch: FetchBytes,
     deadline: float,
 ) -> None:
@@ -286,7 +287,9 @@ def _verify_once(
     _verify_tags(package, npm_version, channel, selected, published)
     with TemporaryDirectory(prefix="assay-served-") as temporary:
         served = Path(temporary) / "release"
-        materialize_served_bundle(reviewed, served, pypi, npm, read_served_bytes, deadline)
+        materialize_served_bundle(
+            reviewed, served, pypi, npm, fetch=read_served_bytes, deadline=deadline
+        )
         _clean_install(served, deadline)
 
 

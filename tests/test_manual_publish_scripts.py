@@ -300,6 +300,7 @@ def test_should_refuse_legacy_token_name_without_registry_mutation(
     tmp_path: Path,
     script: Path,
     arguments: tuple[str, ...],
+    *,
     legacy_name: str,
     required_name: str,
     client: str,
