@@ -11,7 +11,7 @@ import yaml
 
 ROOT = Path(__file__).parents[1]
 WORKFLOW_ROOT = ROOT / ".github/workflows"
-EXPECTED_NPM_SHA256 = "5163e2b557c83a794d5a26272757602d7fed942c397dcd76eb6cb1dd65bd3b25"
+EXPECTED_NPM_SHA256 = "f45dd23d8b2c20fef8a3de4e38fea13bf68fe95b62022bd8dfcab427b964de38"
 
 
 def _node_environment() -> dict[str, str]:
@@ -129,6 +129,22 @@ def test_should_publish_npm_only_inside_the_source_free_dagger_function() -> Non
     assert "--oidc-token=env:ACTIONS_ID_TOKEN_REQUEST_TOKEN" in arguments
 
 
+def test_should_hand_npm_the_lineage_proven_github_actions_context() -> None:
+    # Given
+    steps = _steps(_jobs("publish.yml")["publish-npm"])
+
+    # When
+    lineage = steps[0]["with"]
+    publisher = steps[-1]["with"]
+    assert isinstance(lineage, dict)
+    assert isinstance(publisher, dict)
+
+    # Then
+    assert lineage["args"].startswith("release-provenance --github-token=env:GH_TOKEN ")
+    assert lineage["args"].endswith(" export --path=github-context.json")
+    assert publisher["args"].endswith(" --github-context=github-context.json")
+
+
 def test_should_remove_tag_push_and_completed_recovery_authority() -> None:
     # Given
     publish = (WORKFLOW_ROOT / "publish.yml").read_text(encoding="utf-8")
@@ -193,5 +209,5 @@ def test_should_keep_current_release_identity_without_creating_a_new_release() -
     npm = (ROOT / "ts/package.json").read_text(encoding="utf-8")
 
     # Then
-    assert '__version__ = "0.5.0.dev4"' in python
-    assert '"version": "0.5.0-dev.4"' in npm
+    assert '__version__ = "0.5.0.dev6"' in python
+    assert '"version": "0.5.0-dev.6"' in npm

@@ -143,11 +143,11 @@ shared test cases.
 
 ## Install
 
-> **Status:** prerelease. The current versions are `assay-engine` 0.5.0.dev4 on PyPI and `@gainratio/assay` 0.5.0-dev.4 on npm. There is no stable release yet.
+> **Status:** prerelease. The current versions are `assay-engine` 0.5.0.dev6 on PyPI and `@gainratio/assay` 0.5.0-dev.6 on npm. There is no stable release yet.
 
 ```bash
-pip install assay-engine==0.5.0.dev4
-npm install @gainratio/assay@0.5.0-dev.4
+pip install assay-engine==0.5.0.dev6
+npm install @gainratio/assay@0.5.0-dev.6
 ```
 
 On PyPI the package is called `assay-engine`, but you import it as `assay`. Plain

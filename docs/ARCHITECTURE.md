@@ -149,8 +149,8 @@ boundary.
   input values.
 - **Verify a release:** both registries publish build provenance from this repository's
   release workflow. Check npm with
-  `npm view @gainratio/assay@0.5.0-dev.4 dist.attestations`, and PyPI at
-  `https://pypi.org/integrity/assay-engine/0.5.0.dev4/assay_engine-0.5.0.dev4-py3-none-any.whl/provenance`.
+  `npm view @gainratio/assay@0.5.0-dev.6 dist.attestations`, and PyPI at
+  `https://pypi.org/integrity/assay-engine/0.5.0.dev6/assay_engine-0.5.0.dev6-py3-none-any.whl/provenance`.
 
 ## Cross-language example: build both packages and compare
 

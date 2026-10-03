@@ -30,8 +30,8 @@ _TAGLINE = (
     "and shows exactly how it got there."
 )
 _STATUS = (
-    "> **Status:** prerelease. The current versions are `assay-engine` 0.5.0.dev4 on PyPI "
-    "and `@gainratio/assay` 0.5.0-dev.4 on npm. There is no stable release yet."
+    "> **Status:** prerelease. The current versions are `assay-engine` 0.5.0.dev6 on PyPI "
+    "and `@gainratio/assay` 0.5.0-dev.6 on npm. There is no stable release yet."
 )
 _OPTIONAL = (
     "Assay only computes scores. Sealing evidence about a result is a separate project, "
@@ -125,6 +125,7 @@ def _typecheck_typescript(
         "NodeNext",
         "--strict",
         "--skipLibCheck",
+        "--ignoreConfig",
         str(target),
     ]
     return subprocess.run(  # noqa: S603 - fixed compiler checks repository-owned examples

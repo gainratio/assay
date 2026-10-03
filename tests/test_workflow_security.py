@@ -287,6 +287,13 @@ LINEAGE_ARGS = (
     'release-lineage --github-token=env:GH_TOKEN --repository="$GITHUB_REPOSITORY" '
     '--run-id="$RUN_ID" --head-sha="$HEAD_SHA" --publish-run-id="$GITHUB_RUN_ID"'
 )
+# The npm publisher runs the same lineage proof through release-provenance, which also
+# exports the GitHub Actions context npm needs (see the Dagger publish-npm contract).
+LINEAGE_INVOCATIONS = {
+    "publish-python": LINEAGE_ARGS,
+    "publish-npm": LINEAGE_ARGS.replace("release-lineage ", "release-provenance ", 1)
+    + " export --path=github-context.json",
+}
 LINEAGE_ENV = {
     "GH_TOKEN": "${{ github.token }}",
     "RUN_ID": "${{ github.event.workflow_run.id }}",
@@ -320,11 +327,12 @@ def test_should_prove_candidate_lineage_before_any_publisher_touches_an_artifact
     lineage = _steps(_job(_workflow("publish.yml"), name))[0]
     invocation = dict(_with(lineage))
 
-    # Then it is the central release-lineage call, fed only through quoted env values
+    # Then it is the central lineage call, fed only through quoted env values
     assert str(lineage["uses"]).startswith("dagger/dagger-for-github@")
     assert _mapping(lineage.get("env")) == LINEAGE_ENV
     assert LINEAGE_MODULE.fullmatch(str(invocation.pop("module")))
-    assert invocation == {"version": "0.21.8", "verb": "call", "args": LINEAGE_ARGS}
+    expected = {"version": "0.21.8", "verb": "call", "args": LINEAGE_INVOCATIONS[name]}
+    assert invocation == expected
 
 
 def test_should_gate_publishers_on_successful_manual_default_branch_candidate() -> None:

@@ -4,6 +4,21 @@
 
 ### Changed
 
+- **Next prerelease is `0.5.0-dev.6`** (Python `assay-engine` `0.5.0.dev6`, npm
+  `@gainratio/assay` `0.5.0-dev.6`). Nothing was published as `0.5.0-dev.5`. Its candidate
+  passed, but the publish workflow failed twice. First, the `npm-release` environment
+  only allowed tag deployments, while a `workflow_run` publish job runs on `main`, so
+  GitHub refused the jobs. The owner added a `main` branch rule to that environment.
+  Then both jobs refused the exact, untampered candidate with "candidate envelope
+  contains unexpected material" (fixed in #95, below). `v0.5.0-dev.5` stays on a commit
+  that is no longer `main`, so the version moves on. No scoring change. The pinned npm
+  archive SHA-256 is `dbc72f99…222a098f`.
+- **Next prerelease is `0.5.0-dev.5`** (Python `assay-engine` `0.5.0.dev5`, npm
+  `@gainratio/assay` `0.5.0-dev.5`). Nothing was published as `0.5.0-dev.4`: its release
+  candidate stopped at the identity check because the Dagger step had no
+  `refs/remotes/origin/main`. That check now derives the protected-main ref (#89), and
+  the `v0.5.0-dev.4` tag sits on a commit that is no longer `main`, so the version
+  moves on. No scoring change. The pinned npm archive SHA-256 is `6f929410…5f3cd9af`.
 - **npm package renamed to `@gainratio/assay`; old name deprecated.** The next
   prerelease, `0.5.0-dev.4` (Python `assay-engine` `0.5.0.dev4`), ships only as
   `@gainratio/assay`. `@edgeproc/assay` `0.5.0-dev.3` and older keep installing.
@@ -18,6 +33,18 @@
   and now prints the exact `npm dist-tag add` command that fixes it.
 
 ### Fixed
+
+- **The publish job's envelope check can pass on a real Dagger engine (#95).** Dagger
+  0.21 lists subdirectories with a trailing `/` (`publication/`, `release/`), and the check
+  compared against bare names. Its test fake used bare names too, so the guard could
+  never pass in production and the tests couldn't show it. The expected lists now carry
+  the `/`, which also rejects a file standing in for a directory. The check is still exact.
+- **The npm publisher can detect GitHub Actions (#95).** The Dagger container only had
+  the OIDC request variables, so npm skipped the trusted-publishing exchange
+  (`ENEEDAUTH`) and would refuse `--provenance` ("not supported for provider: null").
+  `publish.yml` now gets the publish run's GitHub Actions context from the central
+  `release-provenance` lineage call. `publish-npm` checks every value before it sets
+  them with `GITHUB_ACTIONS=true`.
 
 - Post-publish verification now fails when npm `latest` does not name an installable
   release. The registry made the empty `0.0.0-bootstrap.0` trusted-publishing stub

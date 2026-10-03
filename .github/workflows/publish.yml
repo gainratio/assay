@@ -70,6 +70,9 @@ jobs:
     steps:
       # A dispatch on a TAG named `main` passes the `if` above. The central lineage proof
       # (hseshadr/ci#49) requires a successful release-candidate.yml run whose SHA is on main.
+      # release-provenance runs that same proof, then writes github-context.json: the GitHub
+      # Actions context npm needs (to detect Actions, exchange OIDC, and sign provenance),
+      # taken from this publish run's own record and kept outside the candidate.
       - uses: dagger/dagger-for-github@496f1b3d8b0d823834c13e67cf8a8e08ca3b9602 # v8.4.0
         env:
           GH_TOKEN: ${{ github.token }}
@@ -79,7 +82,7 @@ jobs:
           version: "0.21.8"
           verb: call
           module: github.com/hseshadr/ci/modules/portfolio-foundation@3de1c4bef2558fd6610b6dda1504b657de7a954d
-          args: release-lineage --github-token=env:GH_TOKEN --repository="$GITHUB_REPOSITORY" --run-id="$RUN_ID" --head-sha="$HEAD_SHA" --publish-run-id="$GITHUB_RUN_ID"
+          args: release-provenance --github-token=env:GH_TOKEN --repository="$GITHUB_REPOSITORY" --run-id="$RUN_ID" --head-sha="$HEAD_SHA" --publish-run-id="$GITHUB_RUN_ID" export --path=github-context.json
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
           name: assay-${{ github.event.workflow_run.head_sha }}
@@ -93,4 +96,4 @@ jobs:
           version: "0.21.8"
           verb: call
           module: github.com/hseshadr/assay@${{ github.event.workflow_run.head_sha }}
-          args: publish-npm --candidate=candidate --expected-sha="$HEAD_SHA" --oidc-url=env:ACTIONS_ID_TOKEN_REQUEST_URL --oidc-token=env:ACTIONS_ID_TOKEN_REQUEST_TOKEN
+          args: publish-npm --candidate=candidate --expected-sha="$HEAD_SHA" --oidc-url=env:ACTIONS_ID_TOKEN_REQUEST_URL --oidc-token=env:ACTIONS_ID_TOKEN_REQUEST_TOKEN --github-context=github-context.json

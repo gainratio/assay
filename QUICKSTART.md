@@ -71,7 +71,7 @@ corepack pnpm gate
 mkdir -p "${TMPDIR:-/tmp}/assay-pack"
 corepack pnpm pack --pack-destination "${TMPDIR:-/tmp}/assay-pack"
 node scripts/normalize-package-archive.mjs \
-  "${TMPDIR:-/tmp}/assay-pack/gainratio-assay-0.5.0-dev.4.tgz"
+  "${TMPDIR:-/tmp}/assay-pack/gainratio-assay-0.5.0-dev.6.tgz"
 ```
 
 The two version lines must print `v22.13.0` and `11.5.0`.
@@ -122,9 +122,9 @@ Read [Methods](docs/METHODS.md) for exact arithmetic and fields,
 
 ## Registry identity
 
-> **Status:** `assay-engine` 0.5.0.dev4 and `@gainratio/assay` 0.5.0-dev.4 are the authorized prerelease pair. Check both registries before installing.
+> **Status:** `assay-engine` 0.5.0.dev6 and `@gainratio/assay` 0.5.0-dev.6 are the authorized prerelease pair. Check both registries before installing.
 
 After both registries list the exact versions, consumers can use
-`pip install assay-engine==0.5.0.dev4` for Python and
-`npm install @gainratio/assay@0.5.0-dev.4` for TypeScript. The checkout paths above do
+`pip install assay-engine==0.5.0.dev6` for Python and
+`npm install @gainratio/assay@0.5.0-dev.6` for TypeScript. The checkout paths above do
 not depend on registry state.

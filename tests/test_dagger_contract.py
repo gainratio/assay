@@ -224,13 +224,20 @@ class RecordingCandidate:
         self._prefix = prefix
 
     async def entries(self) -> list[str]:
+        # Dagger 0.21's Directory.entries() names subdirectories with a trailing
+        # "/" (observed on the real dev.5 candidate: "publication/", "release/").
         prefix = f"{self._prefix}/" if self._prefix else ""
         children = {
-            entry.removeprefix(prefix).split("/", maxsplit=1)[0]
+            RecordingCandidate._child(entry.removeprefix(prefix))
             for entry in self._entries
             if entry.startswith(prefix)
         }
         return sorted(children)
+
+    @staticmethod
+    def _child(relative: str) -> str:
+        name, separator, _ = relative.partition("/")
+        return f"{name}{separator}"
 
     def directory(self, path: str) -> dagger.Directory:
         prefix = f"{self._prefix}/{path}" if self._prefix else path
@@ -509,6 +516,7 @@ def test_should_type_every_authority_and_artifact_boundary() -> None:
     assert npm.parameters["candidate"].annotation is dagger.Directory
     assert npm.parameters["oidc_url"].annotation is dagger.Secret
     assert npm.parameters["oidc_token"].annotation is dagger.Secret
+    assert npm.parameters["github_context"].annotation is dagger.File
     assert npm.return_annotation is str
 
 
@@ -605,20 +613,177 @@ def test_should_reject_a_non_boolean_npm_publish_decision() -> None:
         asyncio.run(Assay._npm_decision(cast(dagger.Directory, candidate), expected_sha=sha))
 
 
+DEV5_CANDIDATE: tuple[str, ...] = (
+    "CANDIDATE-SHA256SUMS",
+    "publication/npm.env",
+    "publication/pypi.env",
+    "publish-tools/npm-12.0.2.tgz",
+    "release/SHA256SUMS",
+    "release/npm/gainratio-assay-0.5.0-dev.5.tgz",
+    "release/python/assay_engine-0.5.0.dev5-py3-none-any.whl",
+    "release/python/assay_engine-0.5.0.dev5.tar.gz",
+)
+
+
+def test_should_model_dagger_directory_entries_with_trailing_slashes() -> None:
+    # Given: the real dev.5 candidate as `dagger query` listed it on Dagger 0.21.8.
+    candidate = RecordingCandidate(list(DEV5_CANDIDATE), {})
+
+    # When
+    roots = asyncio.run(candidate.entries())
+    release = asyncio.run(candidate.directory("release").entries())
+
+    # Then
+    assert roots == ["CANDIDATE-SHA256SUMS", "publication/", "publish-tools/", "release/"]
+    assert release == ["SHA256SUMS", "npm/", "python/"]
+
+
+def test_should_accept_the_exact_candidate_as_dagger_lists_it() -> None:
+    # Given: publish run 37092671500 refused this exact, untampered envelope.
+    candidate = RecordingCandidate(list(DEV5_CANDIDATE), {})
+
+    # When / Then
+    asyncio.run(Assay._require_candidate_shape(cast(dagger.Directory, candidate)))
+
+
+def test_should_reject_unexpected_material_beside_the_candidate() -> None:
+    # Given
+    candidate = RecordingCandidate([*DEV5_CANDIDATE, "attestations/bundle.json"], {})
+
+    # When / Then
+    with pytest.raises(ValueError, match="candidate envelope contains unexpected material"):
+        asyncio.run(Assay._require_candidate_shape(cast(dagger.Directory, candidate)))
+
+
+def test_should_reject_a_file_standing_in_for_an_envelope_directory() -> None:
+    # Given: a plain file named `release` instead of the release directory.
+    entries = [entry for entry in DEV5_CANDIDATE if not entry.startswith("release/")]
+    candidate = RecordingCandidate([*entries, "release"], {})
+
+    # When / Then
+    with pytest.raises(ValueError, match="candidate envelope contains unexpected material"):
+        asyncio.run(Assay._require_candidate_shape(cast(dagger.Directory, candidate)))
+
+
+def test_should_reject_a_directory_standing_in_for_a_python_artifact() -> None:
+    # Given
+    wheel = "release/python/assay_engine-0.5.0.dev5-py3-none-any.whl"
+    entries = [entry for entry in DEV5_CANDIDATE if entry != wheel]
+    candidate = RecordingCandidate([*entries, f"{wheel}/payload.py"], {})
+
+    # When / Then
+    with pytest.raises(ValueError, match="candidate release envelope differs"):
+        asyncio.run(Assay._require_candidate_shape(cast(dagger.Directory, candidate)))
+
+
+PUBLISH_CONTEXT: dict[str, str] = {
+    "GITHUB_EVENT_NAME": "workflow_run",
+    "GITHUB_REF": "refs/heads/main",
+    "GITHUB_REPOSITORY": REPOSITORY,
+    "GITHUB_REPOSITORY_ID": "1306166734",
+    "GITHUB_REPOSITORY_OWNER_ID": "4185618",
+    "GITHUB_RUN_ATTEMPT": "3",
+    "GITHUB_RUN_ID": "37092671500",
+    "GITHUB_SERVER_URL": "https://github.com",
+    "GITHUB_SHA": "eba7158b2fe379cfb7b59e69bfa1f2f2e9ca7fcc",
+    "GITHUB_WORKFLOW": "Publish trusted artifacts",
+    "GITHUB_WORKFLOW_REF": f"{REPOSITORY}/.github/workflows/publish.yml@refs/heads/main",
+    "RUNNER_ENVIRONMENT": "github-hosted",
+}
+
+
+class RecordingContainer:
+    """Record the environment a Dagger container chain receives."""
+
+    def __init__(self) -> None:
+        self.variables: dict[str, str] = {}
+        self.secrets: set[str] = set()
+
+    def container(self) -> Self:
+        return self
+
+    def from_(self, _address: str) -> Self:
+        return self
+
+    def with_directory(self, _path: str, _directory: object) -> Self:
+        return self
+
+    def with_workdir(self, _path: str) -> Self:
+        return self
+
+    def with_env_variable(self, name: str, value: str) -> Self:
+        self.variables[name] = value
+        return self
+
+    def with_secret_variable(self, name: str, _secret: object) -> Self:
+        self.secrets.add(name)
+        return self
+
+
+def test_should_detect_github_actions_inside_the_npm_publisher(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    # Given: npm 12 skips the OIDC exchange and refuses --provenance with
+    # "not supported for provider: null" unless ci-info sees GITHUB_ACTIONS.
+    recording = RecordingContainer()
+    monkeypatch.setattr(dagger_module, "dag", recording)
+    environment = Assay._provenance_environment(json.dumps(PUBLISH_CONTEXT))
+    secret = cast(dagger.Secret, object())
+
+    # When
+    Assay._npm_publisher(cast(dagger.Directory, object()), secret, secret, environment)
+
+    # Then
+    assert recording.variables == {"CI": "true", "GITHUB_ACTIONS": "true", **PUBLISH_CONTEXT}
+    assert recording.secrets == {"ACTIONS_ID_TOKEN_REQUEST_URL", "ACTIONS_ID_TOKEN_REQUEST_TOKEN"}
+
+
+@pytest.mark.parametrize(
+    ("name", "value"),
+    [
+        ("GITHUB_REPOSITORY", "attacker/assay"),
+        ("GITHUB_WORKFLOW_REF", f"{REPOSITORY}/.github/workflows/other.yml@refs/heads/main"),
+        ("GITHUB_SERVER_URL", "https://github.example"),
+        ("RUNNER_ENVIRONMENT", "self-hosted"),
+        ("GITHUB_SHA", "not-a-sha"),
+        ("GITHUB_RUN_ID", "1;rm"),
+    ],
+)
+def test_should_reject_a_provenance_context_for_another_publisher(name: str, value: str) -> None:
+    # Given
+    context = json.dumps(PUBLISH_CONTEXT | {name: value})
+
+    # When / Then
+    with pytest.raises(ValueError, match=f"provenance context {name} is not this repository"):
+        Assay._provenance_environment(context)
+
+
+@pytest.mark.parametrize(
+    "context",
+    [
+        {key: value for key, value in PUBLISH_CONTEXT.items() if key != "GITHUB_SHA"},
+        PUBLISH_CONTEXT | {"NODE_OPTIONS": "--require /tmp/x.js"},
+        [PUBLISH_CONTEXT],
+    ],
+)
+def test_should_reject_a_provenance_context_with_other_variables(context: object) -> None:
+    # When / Then
+    with pytest.raises(ValueError, match="exactly the npm provenance variables"):
+        Assay._provenance_environment(json.dumps(context))
+
+
+def test_should_reject_a_non_string_provenance_value() -> None:
+    # Given
+    context = json.dumps(PUBLISH_CONTEXT | {"GITHUB_RUN_ID": 37092671500})
+
+    # When / Then
+    with pytest.raises(ValueError, match="provenance context GITHUB_RUN_ID is not this"):
+        Assay._provenance_environment(context)
+
+
 def test_should_reject_extra_material_inside_the_release_envelope() -> None:
     # Given
-    entries = [
-        "CANDIDATE-SHA256SUMS",
-        "publication/npm.env",
-        "publication/pypi.env",
-        "publish-tools/npm-12.0.2.tgz",
-        "release/SHA256SUMS",
-        "release/npm/gainratio-assay-0.5.0-dev.4.tgz",
-        "release/python/assay_engine-0.5.0.dev4-py3-none-any.whl",
-        "release/python/assay_engine-0.5.0.dev4.tar.gz",
-        "release/source.py",
-    ]
-    candidate = RecordingCandidate(entries, {})
+    candidate = RecordingCandidate([*DEV5_CANDIDATE, "release/source.py"], {})
 
     # When / Then
     with pytest.raises(ValueError, match="candidate release envelope differs"):
@@ -672,5 +837,7 @@ def test_should_reduce_the_total_dagger_and_workflow_surface() -> None:
     lines = sum(len(path.read_text(encoding="utf-8").splitlines()) for path in paths)
 
     # Then (budget raised from 700 to 720 for the two central lineage steps in publish.yml,
-    # hseshadr/ci#49: required publisher surface, not new repository logic)
-    assert 400 <= lines <= 720
+    # hseshadr/ci#49: required publisher surface, not new repository logic; then to 780
+    # for npm's validated GitHub Actions provenance context, without which npm cannot
+    # detect Actions, exchange OIDC, or sign provenance inside the Dagger container)
+    assert 400 <= lines <= 780
