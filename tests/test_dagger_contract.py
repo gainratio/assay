@@ -24,7 +24,7 @@ import assay_dagger.main as dagger_module  # noqa: E402
 from assay_dagger.main import Assay  # noqa: E402
 from scripts.release_epoch import source_date_epoch  # noqa: E402
 
-FOUNDATION_SHA = "a895f726e9786bcfd2bdf68f87d3d5c4b411f702"
+FOUNDATION_SHA = "6075c0c4e0feb7bbdde4bcb9ee2f0b31304251e9"
 REPOSITORY = "hseshadr/assay"
 
 
@@ -802,6 +802,37 @@ def test_should_pin_every_downloaded_tool_and_package_manager() -> None:
     assert module.PNPM_VERSION == "11.5.0"
 
 
+MIRROR = "ghcr.io/hseshadr/mirror/"
+MIRROR_PYTHON = (
+    MIRROR + "docker.io/library/python:3.13.14-slim@sha256:"
+    "9662417aace5ae7b8e2609cce472b72a8958e134ba372808abe9cc1a0c0125e6"
+)
+MIRROR_ENGINE = (
+    "image://" + MIRROR + "registry.dagger.io/engine:v0.21.8@sha256:"
+    "c9c1a0a6546380983d42e8d75adde070a2a0935c54b498d8bc9045d9cb2ee336"
+)
+
+
+def test_should_pull_every_image_from_the_ghcr_mirror_by_digest() -> None:
+    # Given the module's image constants and the Python SDK runtime image
+    images = (dagger_module.PYTHON_IMAGE, dagger_module.UV_IMAGE, dagger_module.NODE_IMAGE)
+    project = tomllib.loads((ROOT / ".dagger" / "pyproject.toml").read_text())
+
+    # Then nothing is pulled from Docker Hub, and the SDK base is the same digest-pinned copy
+    assert all(image.startswith(MIRROR) and "@sha256:" in image for image in images)
+    assert dagger_module.PYTHON_IMAGE == MIRROR_PYTHON
+    assert project["tool"]["dagger"]["base-image"] == MIRROR_PYTHON
+
+
+def test_should_start_the_ci_engine_from_the_ghcr_mirror() -> None:
+    # Given the pull-request and security workflows
+    names = ("dagger.yml", "security-audit.yml")
+    texts = [(ROOT / ".github" / "workflows" / name).read_text() for name in names]
+
+    # Then each provisions the Dagger engine from the mirrored digest
+    assert all(f"_EXPERIMENTAL_DAGGER_RUNNER_HOST: {MIRROR_ENGINE}" in text for text in texts)
+
+
 def test_should_lock_temporal_audit_tools_in_the_repository_environment() -> None:
     # Given / When
     project = (ROOT / "pyproject.toml").read_text(encoding="utf-8")
@@ -841,5 +872,6 @@ def test_should_reduce_the_total_dagger_and_workflow_surface() -> None:
     # for npm's validated GitHub Actions provenance context, without which npm cannot
     # detect Actions, exchange OIDC, or sign provenance inside the Dagger container; then
     # to 850 for dependabot-repin.yml, which replaces the human re-pin of the npm archive
-    # digest on every Dependabot dev-tool bump; its logic lives in scripts/, not here)
-    assert 400 <= lines <= 850
+    # digest on every Dependabot dev-tool bump; its logic lives in scripts/, not here; then
+    # to 860 for the GHCR mirror engine env on two workflows and the split mirror image ref)
+    assert 400 <= lines <= 860
