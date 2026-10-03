@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import re
 from dataclasses import dataclass
 from typing import Final, Protocol, Self, cast
@@ -31,6 +32,7 @@ REPOSITORY: Final = "hseshadr/assay"
 REPOSITORY_URL: Final = f"https://github.com/{REPOSITORY}.git"
 SHA_LENGTH: Final = 40
 PYTHON_ARTIFACT_COUNT: Final = 2
+CANDIDATE_ROOTS: Final = ["CANDIDATE-SHA256SUMS", "publication/", "publish-tools/", "release/"]
 SOURCE_EXCLUDES: Final = [
     ".git",
     ".venv",
@@ -49,6 +51,31 @@ SOURCE_EXCLUDES: Final = [
     "*.pem",
     "**/*.pem",
 ]
+DIGITS: Final = re.compile(r"[0-9]+")
+BRANCH_REF: Final = r"refs/heads/[A-Za-z0-9._/-]+"
+# npm detects GitHub Actions only through ci-info's GITHUB_ACTIONS. Without it,
+# npm skips the OIDC trusted-publishing exchange and `--provenance` fails with
+# `EUSAGE: Automatic provenance generation not supported for provider: null`.
+# npm writes these values into the SLSA statement (libnpmpublish provenance.js)
+# and the registry checks them against the Sigstore certificate. They come from
+# the lineage-proven publish run record and are validated before npm sees them.
+PROVENANCE_CONTEXT: Final[dict[str, re.Pattern[str]]] = {
+    "GITHUB_EVENT_NAME": re.compile(r"workflow_run"),
+    "GITHUB_REF": re.compile(BRANCH_REF),
+    "GITHUB_REPOSITORY": re.compile(re.escape(REPOSITORY)),
+    "GITHUB_REPOSITORY_ID": DIGITS,
+    "GITHUB_REPOSITORY_OWNER_ID": DIGITS,
+    "GITHUB_RUN_ATTEMPT": DIGITS,
+    "GITHUB_RUN_ID": DIGITS,
+    "GITHUB_SERVER_URL": re.compile(r"https://github\.com"),
+    "GITHUB_SHA": re.compile(r"[0-9a-f]{40}"),
+    "GITHUB_WORKFLOW": re.compile(r"[ -~]+"),
+    # npm trusted publishing is bound to this exact workflow file.
+    "GITHUB_WORKFLOW_REF": re.compile(
+        re.escape(f"{REPOSITORY}/.github/workflows/publish.yml@") + BRANCH_REF
+    ),
+    "RUNNER_ENVIRONMENT": re.compile(r"github-hosted"),
+}
 NPM_ARCHIVE = re.compile(r"^gainratio-assay-[0-9]+\.[0-9]+\.[0-9]+(?:-dev\.[0-9]+)?\.tgz$")
 PYTHON_WHEEL = re.compile(
     r"^assay_engine-[0-9]+\.[0-9]+\.[0-9]+(?:\.dev[0-9]+)?-py3-none-any\.whl$"
@@ -161,14 +188,32 @@ class Assay:
         expected_sha: str,
         oidc_url: dagger.Secret,
         oidc_token: dagger.Secret,
+        github_context: dagger.File,
     ) -> str:
         """Publish one source-free npm artifact with OIDC provenance."""
         self._require_sha(expected_sha)
+        environment = self._provenance_environment(await github_context.contents())
         await (await self._validated_candidate(candidate)).sync()
         plan = await self._npm_decision(candidate, expected_sha)
         if not plan.publish:
             return "verified existing npm bytes and provenance"
-        return await self._publish_npm(candidate, plan, oidc_url, oidc_token)
+        publisher = self._npm_publisher(candidate, oidc_url, oidc_token, environment)
+        return await self._publish_npm(candidate, plan, publisher)
+
+    @staticmethod
+    def _provenance_environment(context: str) -> dict[str, str]:
+        """Validate the publish run's GitHub Actions context into npm's environment."""
+        parsed: object = json.loads(context)
+        if not isinstance(parsed, dict) or set(parsed) != set(PROVENANCE_CONTEXT):
+            raise ValueError("provenance context must carry exactly the npm provenance variables")
+        values = {name: Assay._context_value(name, parsed[name]) for name in parsed}
+        return {"CI": "true", "GITHUB_ACTIONS": "true", **values}
+
+    @staticmethod
+    def _context_value(name: str, value: object) -> str:
+        if not isinstance(value, str) or PROVENANCE_CONTEXT[name].fullmatch(value) is None:
+            raise ValueError(f"provenance context {name} is not this repository's publisher")
+        return value
 
     def _python_gate(self, source: dagger.Directory) -> dagger.Container:
         return self._repository(source).with_exec(["uv", "run", "poe", "gate"])
@@ -312,8 +357,9 @@ class Assay:
 
     @staticmethod
     async def _require_candidate_shape(candidate: dagger.Directory) -> None:
-        roots = sorted(await candidate.entries())
-        if roots != ["CANDIDATE-SHA256SUMS", "publication", "publish-tools", "release"]:
+        # Directory.entries() names subdirectories with a trailing "/", so these
+        # lists also pin which entries are files and which are directories.
+        if sorted(await candidate.entries()) != CANDIDATE_ROOTS:
             raise ValueError("candidate envelope contains unexpected material")
         publication = await candidate.directory("publication").entries()
         if sorted(publication) != ["npm.env", "pypi.env"]:
@@ -325,7 +371,7 @@ class Assay:
 
     @staticmethod
     async def _require_release_shape(release: dagger.Directory) -> None:
-        if sorted(await release.entries()) != ["SHA256SUMS", "npm", "python"]:
+        if sorted(await release.entries()) != ["SHA256SUMS", "npm/", "python/"]:
             raise ValueError("candidate release envelope differs")
         npm = await release.directory("npm").entries()
         python = await release.directory("python").entries()
@@ -394,11 +440,9 @@ class Assay:
         self,
         candidate: dagger.Directory,
         plan: NpmPlan,
-        oidc_url: dagger.Secret,
-        oidc_token: dagger.Secret,
+        publisher: dagger.Container,
     ) -> str:
         archive = await self._npm_archive(candidate)
-        publisher = self._npm_publisher(candidate, oidc_url, oidc_token)
         publisher = publisher.with_exec(["sh", "-ceu", self._publisher_digest_command()])
         publisher = publisher.with_exec(["mkdir", "-p", "/publisher"])
         publisher = publisher.with_exec(
@@ -419,9 +463,14 @@ class Assay:
 
     @staticmethod
     def _npm_publisher(
-        candidate: dagger.Directory, oidc_url: dagger.Secret, oidc_token: dagger.Secret
+        candidate: dagger.Directory,
+        oidc_url: dagger.Secret,
+        oidc_token: dagger.Secret,
+        environment: dict[str, str],
     ) -> dagger.Container:
         base = dag.container().from_(NODE_IMAGE).with_directory("/candidate", candidate)
+        for name, value in sorted(environment.items()):
+            base = base.with_env_variable(name, value)
         base = base.with_workdir("/candidate").with_secret_variable(
             "ACTIONS_ID_TOKEN_REQUEST_URL", oidc_url
         )

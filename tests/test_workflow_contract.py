@@ -129,6 +129,22 @@ def test_should_publish_npm_only_inside_the_source_free_dagger_function() -> Non
     assert "--oidc-token=env:ACTIONS_ID_TOKEN_REQUEST_TOKEN" in arguments
 
 
+def test_should_hand_npm_the_lineage_proven_github_actions_context() -> None:
+    # Given
+    steps = _steps(_jobs("publish.yml")["publish-npm"])
+
+    # When
+    lineage = steps[0]["with"]
+    publisher = steps[-1]["with"]
+    assert isinstance(lineage, dict)
+    assert isinstance(publisher, dict)
+
+    # Then
+    assert lineage["args"].startswith("release-provenance --github-token=env:GH_TOKEN ")
+    assert lineage["args"].endswith(" export --path=github-context.json")
+    assert publisher["args"].endswith(" --github-context=github-context.json")
+
+
 def test_should_remove_tag_push_and_completed_recovery_authority() -> None:
     # Given
     publish = (WORKFLOW_ROOT / "publish.yml").read_text(encoding="utf-8")
