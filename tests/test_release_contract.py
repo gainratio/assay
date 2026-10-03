@@ -905,7 +905,7 @@ def test_should_materialize_and_verify_the_actual_registry_served_bytes(
         return downloads[url]
 
     # When final verification materializes the registry responses
-    verifier.materialize_served_bundle(release_bundle, served, pypi, npm, fetch, 600.0)
+    verifier.materialize_served_bundle(release_bundle, served, pypi, npm, fetch, deadline=600.0)
     # Then all three local files came from the served responses and form the exact envelope
     expected = {
         path.relative_to(release_bundle): path.read_bytes()

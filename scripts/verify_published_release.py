@@ -162,17 +162,22 @@ def _materialize_npm(
     _download(target, _npm_tarball_url(payload), fetch, deadline, artifact.stat().st_size)
 
 
+def _remove_tree(path: Path) -> None:
+    if path.exists():
+        shutil.rmtree(path)
+
+
 def materialize_served_bundle(
     reviewed: Path,
     served: Path,
     pypi_payload: object,
     npm_payload: object,
     fetch: FetchBytes,
+    *,
     deadline: float,
 ) -> None:
     """Build an exact release envelope from registry-served artifact bytes."""
-    if served.exists():
-        shutil.rmtree(served)
+    _remove_tree(served)
     _materialize_python(reviewed, served, pypi_payload, fetch, deadline)
     _materialize_npm(reviewed, served, npm_payload, fetch, deadline)
     shutil.copyfile(reviewed / "SHA256SUMS", served / "SHA256SUMS")
@@ -286,7 +291,7 @@ def _verify_once(
     _verify_tags(package, npm_version, channel, selected, published)
     with TemporaryDirectory(prefix="assay-served-") as temporary:
         served = Path(temporary) / "release"
-        materialize_served_bundle(reviewed, served, pypi, npm, read_served_bytes, deadline)
+        materialize_served_bundle(reviewed, served, pypi, npm, read_served_bytes, deadline=deadline)
         _clean_install(served, deadline)
 
 
