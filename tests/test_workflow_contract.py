@@ -11,7 +11,7 @@ import yaml
 
 ROOT = Path(__file__).parents[1]
 WORKFLOW_ROOT = ROOT / ".github/workflows"
-EXPECTED_NPM_SHA256 = "6f929410dd66b2200db22bd0757b88e180afe7b43ee55fdc3e8180552f3cd9af"
+EXPECTED_NPM_SHA256 = "f45dd23d8b2c20fef8a3de4e38fea13bf68fe95b62022bd8dfcab427b964de38"
 
 
 def _node_environment() -> dict[str, str]:
@@ -209,5 +209,5 @@ def test_should_keep_current_release_identity_without_creating_a_new_release() -
     npm = (ROOT / "ts/package.json").read_text(encoding="utf-8")
 
     # Then
-    assert '__version__ = "0.5.0.dev5"' in python
-    assert '"version": "0.5.0-dev.5"' in npm
+    assert '__version__ = "0.5.0.dev6"' in python
+    assert '"version": "0.5.0-dev.6"' in npm

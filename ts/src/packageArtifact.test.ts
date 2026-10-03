@@ -7,9 +7,9 @@ import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 
 const PACKAGE_ROOT = new URL("..", import.meta.url);
-const ARCHIVE_NAME = "gainratio-assay-0.5.0-dev.5.tgz";
+const ARCHIVE_NAME = "gainratio-assay-0.5.0-dev.6.tgz";
 const EXPECTED_ARCHIVE_SHA256 =
-  "6f929410dd66b2200db22bd0757b88e180afe7b43ee55fdc3e8180552f3cd9af";
+  "f45dd23d8b2c20fef8a3de4e38fea13bf68fe95b62022bd8dfcab427b964de38";
 const OPTIONAL_INTEGRATION =
   "Assay computes scores; Avow seals evidence. They are separate products and neither requires the other.";
 const EXPECTED_MEMBERS = [
@@ -87,7 +87,7 @@ describe("the real npm artifact", () => {
       const readme = run("tar", ["-xOzf", archive, "package/README.md"]);
       expect(manifest).toMatchObject({
         name: "@gainratio/assay",
-        version: "0.5.0-dev.5",
+        version: "0.5.0-dev.6",
         type: "module",
         dependencies: {},
         exports: {
