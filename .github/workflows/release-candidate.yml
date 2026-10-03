@@ -30,7 +30,7 @@ jobs:
       # variable. dagger-for-github pastes `args` into bash, so every value there
       # is a double-quoted variable that bash expands as one inert word. Dagger
       # then rejects any tag that is not the metadata-derived tag on exact main.
-      - uses: dagger/dagger-for-github@496f1b3d8b0d823834c13e67cf8a8e08ca3b9602 # v8.4.0
+      - uses: dagger/dagger-for-github@27b130bf0f79a7f6fbbbe0fbca6760dc9bb40a77 # v8.4.1
         env:
           GITHUB_TOKEN: ${{ github.token }}
           TAG: ${{ inputs.tag }}
@@ -38,7 +38,7 @@ jobs:
           version: "0.21.8"
           verb: call
           args: release-candidate --tag="$TAG" --commit-sha="$GITHUB_SHA" --github-token=env:GITHUB_TOKEN export --path=candidate
-      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: assay-${{ github.sha }}
           path: candidate/
