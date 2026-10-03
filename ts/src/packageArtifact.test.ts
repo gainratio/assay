@@ -9,7 +9,7 @@ import { describe, expect, it } from "vitest";
 const PACKAGE_ROOT = new URL("..", import.meta.url);
 const ARCHIVE_NAME = "gainratio-assay-0.5.0-dev.6.tgz";
 const EXPECTED_ARCHIVE_SHA256 =
-  "dbc72f99dc46b8825b882a705b8ed63921d0fa9516517914cc218550222a098f";
+  "f45dd23d8b2c20fef8a3de4e38fea13bf68fe95b62022bd8dfcab427b964de38";
 const OPTIONAL_INTEGRATION =
   "Assay computes scores; Avow seals evidence. They are separate products and neither requires the other.";
 const EXPECTED_MEMBERS = [

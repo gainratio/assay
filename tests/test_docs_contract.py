@@ -125,6 +125,7 @@ def _typecheck_typescript(
         "NodeNext",
         "--strict",
         "--skipLibCheck",
+        "--ignoreConfig",
         str(target),
     ]
     return subprocess.run(  # noqa: S603 - fixed compiler checks repository-owned examples
