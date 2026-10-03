@@ -12,9 +12,9 @@ concurrency:
 jobs:
   derive:
     if: >-
-      github.event.pull_request.user.login == 'dependabot[bot]' &&
+      github.event.pull_request.user.login == 'hseshadr' &&
       github.event.pull_request.head.repo.full_name == github.repository &&
-      startsWith(github.head_ref, 'dependabot/npm_and_yarn/')
+      startsWith(github.head_ref, 'test/repin-pilot')
     runs-on: ubuntu-latest
     permissions:
       contents: read
