@@ -27,8 +27,10 @@ Dependabot with GitHub Actions", "Troubleshooting Dependabot on GitHub Actions",
   sha256, which ``rewrite`` re-validates. A forged digest can only yield a wrong pin,
   which the unchanged pin tests reject.
 * ``repin`` holds the write token and runs no dependency code: this tool comes from
-  the base commit and only edits text. A GITHUB_TOKEN commit starts no CI run, so it
-  dispatches Dagger (dispatch always runs) and cancels the superseded run.
+  the base commit and only edits text, then cancels CI on the superseded commit.
+  GitHub puts the pull_request run for a GITHUB_TOKEN commit in an approval-required
+  state; one "Approve workflows to run" click starts the required Dagger check. Making
+  that automatic needs a GitHub App token stored as a Dependabot secret (owner's call).
 * ``explain`` comments on PRs that need a human: shipped bytes changed, or a GitHub
   Action SHA pin moved (those pins record a human review and are never automated).
 """

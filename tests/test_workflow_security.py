@@ -103,10 +103,10 @@ def test_should_make_ci_one_checkout_and_one_dagger_call() -> None:
     dagger_step = _action("dagger/dagger-for-github", job)
 
     # Then
-    # workflow_dispatch lets the Dependabot re-pin job start CI on its own commit:
-    # a GITHUB_TOKEN push creates no pull_request run, but a dispatch always runs.
-    assert set(_mapping(workflow["on"])) == {"push", "pull_request", "workflow_dispatch"}
-    assert _mapping(workflow["on"])["workflow_dispatch"] == ""
+    # No workflow_dispatch: a dispatched run is not a pull-request check, so it can never
+    # satisfy the required "Dagger" check (observed on the #101 pilot). The re-pin commit
+    # instead gets the documented approval-required pull_request run.
+    assert set(_mapping(workflow["on"])) == {"push", "pull_request"}
     assert _uses(job) == (
         "actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1",
         "dagger/dagger-for-github@27b130bf0f79a7f6fbbbe0fbca6760dc9bb40a77",
@@ -431,6 +431,8 @@ def test_should_keep_dependency_code_away_from_the_write_token() -> None:
     assert not [run for run in repin_runs if any(builder in run for builder in builders)]
     assert "tool=base/scripts/repin_npm_archive.py" in repin_runs[0]
     assert '--head-sha "$HEAD_SHA"' in repin_runs[0]
+    assert "gh workflow run" not in repin_runs[0]
+    assert "gh run cancel" in repin_runs[0]
 
 
 def test_should_check_out_both_sides_by_immutable_sha() -> None:
