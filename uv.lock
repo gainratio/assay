@@ -75,7 +75,7 @@ dev = [
 requires-dist = [
     { name = "ir-measures", marker = "extra == 'metrics'", specifier = ">=0.4.3" },
     { name = "numpy", marker = "extra == 'metrics'", specifier = ">=2.5.3" },
-    { name = "pydantic", specifier = ">=2.13.5" },
+    { name = "pydantic", specifier = ">=2.11" },
     { name = "pydantic-settings", marker = "extra == 'metrics'", specifier = ">=2.15.0" },
     { name = "scikit-learn", marker = "extra == 'metrics'", specifier = ">=1.9.1" },
     { name = "scipy", marker = "extra == 'metrics'", specifier = ">=1.18.1" },
