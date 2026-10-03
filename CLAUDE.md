@@ -66,6 +66,9 @@ uv run poe benchmark
 - Dagger owns quality, parity, mutation, examples, benchmarks, exact artifacts, dependency audits,
   workflow security, and snapshot plus full-history secret scans. GitHub only admits pinned events.
 - Run both complete language gates after shared-contract changes.
+- Dependabot npm PRs are re-pinned by `.github/workflows/dependabot-repin.yml` only when the
+  packed archive differs from main in `package.json` devDependencies alone. Any change to shipped
+  bytes, and every GitHub Action SHA bump, still needs a human re-pin after review.
 - Keep TypeScript scoring modules above 90% branch, function, and line coverage per file.
 - `@gainratio/assay@0.5.0-dev.6` is the authorized prerelease identity. Do not publish, tag, or
   change release settings without explicit approval.

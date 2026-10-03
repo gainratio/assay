@@ -1,0 +1,83 @@
+# Re-pins the npm archive digest on Dependabot npm PRs when only devDependencies moved,
+# and explains the manual step otherwise. Design and security reasoning:
+# scripts/repin_npm_archive.py. The pin tests are unchanged.
+name: Dependabot re-pin
+on:
+  pull_request:
+    branches: [main]
+permissions: {}
+concurrency:
+  group: assay-repin-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+jobs:
+  derive:
+    if: >-
+      github.event.pull_request.user.login == 'dependabot[bot]' &&
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      startsWith(github.head_ref, 'dependabot/npm_and_yarn/')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    outputs:
+      decision: ${{ steps.classify.outputs.decision }}
+      digest: ${{ steps.classify.outputs.digest }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with: {ref: "${{ github.event.pull_request.base.sha }}", path: base, persist-credentials: false}
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with: {ref: "${{ github.event.pull_request.head.sha }}", path: head, persist-credentials: false}
+      - uses: dagger/dagger-for-github@27b130bf0f79a7f6fbbbe0fbca6760dc9bb40a77 # v8.4.1
+        with: {version: "0.21.8", verb: call, workdir: base, args: artifacts export --path=../out/base}
+      - uses: dagger/dagger-for-github@27b130bf0f79a7f6fbbbe0fbca6760dc9bb40a77 # v8.4.1
+        with: {version: "0.21.8", verb: call, workdir: head, args: artifacts export --path=../out/head}
+      - id: classify
+        run: |
+          python3 base/scripts/repin_npm_archive.py classify out/base/npm/*.tgz out/head/npm/*.tgz \
+            | tee -a "$GITHUB_OUTPUT" "$GITHUB_STEP_SUMMARY"
+  repin:
+    needs: derive
+    if: needs.derive.outputs.decision == 'auto'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write # commit the three re-pinned literals to the Dependabot branch
+      actions: write # dispatch Dagger on the new commit and cancel the superseded run
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with: {ref: "${{ github.event.pull_request.base.sha }}", path: base, persist-credentials: false}
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with: {ref: "${{ github.event.pull_request.head.sha }}", path: head, persist-credentials: false}
+      - env:
+          DIGEST: ${{ needs.derive.outputs.digest }}
+          BRANCH: ${{ github.head_ref }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          REPOSITORY: ${{ github.repository }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          tool=base/scripts/repin_npm_archive.py
+          mapfile -t changed < <(python3 "$tool" rewrite --root head --digest "$DIGEST" | grep .)
+          [ "${#changed[@]}" -gt 0 ] || { echo "digest already pinned"; exit 0; }
+          python3 "$tool" commit-request --root head --repository "$REPOSITORY" \
+            --branch "$BRANCH" --head-sha "$HEAD_SHA" "${changed[@]}" > request.json
+          gh api graphql --input request.json
+          gh workflow run dagger.yml --repo "$REPOSITORY" --ref "$BRANCH"
+          gh run list --repo "$REPOSITORY" --workflow dagger.yml --commit "$HEAD_SHA" \
+            --json databaseId,status --jq '.[] | select(.status != "completed") | .databaseId' \
+            | xargs -r -n1 gh run cancel --repo "$REPOSITORY"
+  explain:
+    needs: derive
+    if: >-
+      always() && github.event.action == 'opened' &&
+      github.event.pull_request.user.login == 'dependabot[bot]' &&
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      (needs.derive.outputs.decision == 'review' || startsWith(github.head_ref, 'dependabot/github_actions/'))
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write # comment why this bump needs a human re-pin
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with: {ref: "${{ github.event.pull_request.base.sha }}", path: base, persist-credentials: false}
+      - env:
+          GH_TOKEN: ${{ github.token }}
+          PR_URL: ${{ github.event.pull_request.html_url }}
+          KIND: ${{ needs.derive.outputs.decision == 'review' && 'archive' || 'actions' }}
+        run: python3 base/scripts/repin_npm_archive.py explain "$KIND" | gh pr comment "$PR_URL" --body-file -
