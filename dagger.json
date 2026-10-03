@@ -13,8 +13,8 @@
   "dependencies": [
     {
       "name": "foundation",
-      "source": "github.com/hseshadr/ci/modules/portfolio-foundation@b7e9763e4f56bf06cef78da8d8f6b66af5a10426",
-      "pin": "b7e9763e4f56bf06cef78da8d8f6b66af5a10426"
+      "source": "github.com/hseshadr/ci/modules/portfolio-foundation@6075c0c4e0feb7bbdde4bcb9ee2f0b31304251e9",
+      "pin": "6075c0c4e0feb7bbdde4bcb9ee2f0b31304251e9"
     }
   ],
   "source": ".dagger"

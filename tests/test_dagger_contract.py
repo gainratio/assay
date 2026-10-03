@@ -24,7 +24,7 @@ import assay_dagger.main as dagger_module  # noqa: E402
 from assay_dagger.main import Assay  # noqa: E402
 from scripts.release_epoch import source_date_epoch  # noqa: E402
 
-FOUNDATION_SHA = "a895f726e9786bcfd2bdf68f87d3d5c4b411f702"
+FOUNDATION_SHA = "6075c0c4e0feb7bbdde4bcb9ee2f0b31304251e9"
 REPOSITORY = "hseshadr/assay"
 
 
