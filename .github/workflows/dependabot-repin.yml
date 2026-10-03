@@ -40,7 +40,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write # commit the three re-pinned literals to the Dependabot branch
-      actions: write # dispatch Dagger on the new commit and cancel the superseded run
+      actions: write # cancel the run on the superseded commit
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with: {ref: "${{ github.event.pull_request.base.sha }}", path: base, persist-credentials: false}
@@ -59,7 +59,6 @@ jobs:
           python3 "$tool" commit-request --root head --repository "$REPOSITORY" \
             --branch "$BRANCH" --head-sha "$HEAD_SHA" "${changed[@]}" > request.json
           gh api graphql --input request.json
-          gh workflow run dagger.yml --repo "$REPOSITORY" --ref "$BRANCH"
           gh run list --repo "$REPOSITORY" --workflow dagger.yml --commit "$HEAD_SHA" \
             --json databaseId,status --jq '.[] | select(.status != "completed") | .databaseId' \
             | xargs -r -n1 gh run cancel --repo "$REPOSITORY"
