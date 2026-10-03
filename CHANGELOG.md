@@ -4,6 +4,12 @@
 
 ### Changed
 
+- **Prereleases publish to npm `latest` until a stable release exists.** Before, every
+  prerelease went to `next`, so `npm install @gainratio/assay` stayed on an older
+  version until the owner moved `latest` by hand with a security key. Now the publish
+  plan picks `latest` for a prerelease whenever `latest` does not already name a stable
+  version; once one does, prereleases go back to `next`. The `next` tag is left where
+  it is meanwhile (it stays on `0.5.0-dev.6`). No scoring change.
 - **Next prerelease is `0.5.0-dev.6`** (Python `assay-engine` `0.5.0.dev6`, npm
   `@gainratio/assay` `0.5.0-dev.6`). Nothing was published as `0.5.0-dev.5`. Its candidate
   passed, but the publish workflow failed twice. First, the `npm-release` environment

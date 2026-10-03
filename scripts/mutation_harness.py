@@ -71,6 +71,7 @@ _METRIC_VECTORS = "testdata/vectors/metrics.json"
 _COMPOSITION_VECTORS = "testdata/vectors/composition.json"
 _PNPM_WORKSPACE = "ts/pnpm-workspace.yaml"
 _PUBLISHED_VERIFIER = "scripts/verify_published_release.py"
+_REGISTRY_GUARD = "scripts/registry_release_guard.py"
 _TS_RANKING = "ts/src/ranking.ts"
 _TS_METRICS = "ts/src/metrics.ts"
 _TS_NORMALIZE = "ts/src/normalize.ts"
@@ -599,6 +600,23 @@ _MIXED_PRODUCT_MUTATIONS: tuple[Mutation, ...] = (
             "    _verify_selected_tag(tags, version, selected, published)\n"
             "    _verify_default_install(payload, tags)\n",
             "    _verify_selected_tag(tags, version, selected, published)\n",
+        ),
+    ),
+    # Before any stable release, a prerelease must take `latest` itself; otherwise every
+    # prerelease needs someone with the npm security key to retag `latest` by hand.
+    Mutation(
+        name="npm-prerelease-takes-latest-until-stable",
+        claim="a prerelease publishes to latest while no stable release exists",
+        target=_REGISTRY_GUARD,
+        guard=(
+            "tests/test_release_contract.py::"
+            "test_should_publish_a_prerelease_to_latest_while_no_stable_release_exists",
+            "tests/test_release_contract.py::"
+            "test_should_plan_the_registry_decision_on_latest_before_any_stable_release",
+        ),
+        edit=_replace_once(
+            '    if channel == "next" and not _stable_release_exists(tags):\n',
+            '    if channel == "next" and _stable_release_exists(tags):\n',
         ),
     ),
     # ----------------------------------------------------------------------------------
@@ -1660,11 +1678,11 @@ def _is_allowed_assay_target(target: str) -> bool:
 
 
 def _is_active_assay_mutation(mutation: Mutation) -> bool:
-    """Keep Assay scoring guards in both runtimes plus the two exact release guards."""
+    """Keep Assay scoring guards in both runtimes plus the three exact release guards."""
     return (
         mutation.runner == _VITEST
         or _is_allowed_assay_target(mutation.target)
-        or mutation.target in (_PNPM_WORKSPACE, _PUBLISHED_VERIFIER)
+        or mutation.target in (_PNPM_WORKSPACE, _PUBLISHED_VERIFIER, _REGISTRY_GUARD)
     )
 
 

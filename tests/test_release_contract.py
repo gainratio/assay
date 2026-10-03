@@ -460,7 +460,8 @@ def test_should_accept_a_completed_historical_retry_without_retagging(
         ("1.2.3", {}, "latest"),
         ("1.2.3", {"latest": "1.2.2"}, "latest"),
         ("1.2.3", {"latest": "1.2.4"}, "assay-v1-2-3"),
-        ("1.2.3-dev.4", {"next": "1.2.3-dev.5"}, "assay-v1-2-3-dev-4"),
+        ("1.2.3-dev.4", {"latest": "1.2.2", "next": "1.2.3-dev.5"}, "assay-v1-2-3-dev-4"),
+        ("1.2.3-dev.4", {"latest": "1.2.3-dev.5"}, "assay-v1-2-3-dev-4"),
     ],
 )
 def test_should_select_a_nondefault_tag_for_out_of_order_publication(
@@ -481,7 +482,7 @@ _BOOTSTRAP_TAGS: dict[str, object] = {
 
 @pytest.mark.parametrize(
     ("version", "expected"),
-    [("0.5.0", "latest"), ("0.5.0-dev.4", "next")],
+    [("0.5.0", "latest"), ("0.5.0-dev.4", "latest")],
 )
 def test_should_publish_over_the_bootstrap_placeholder_when_the_name_is_new(
     version: str, expected: str
@@ -489,8 +490,70 @@ def test_should_publish_over_the_bootstrap_placeholder_when_the_name_is_new(
     # Given a freshly claimed name: npm made the 0.0.0-bootstrap.0 stub `latest`
     guard = _load_guard()
     # When the first real release plans its tag
-    # Then the stub counts as no release on that channel, not as a corrupt channel
+    # Then the stub counts as no release, and even a prerelease replaces it on `latest`
+    # (this used to expect `next`, which left `npm install` on the empty stub)
     assert guard.npm_publish_tag(version, dict(_BOOTSTRAP_TAGS)) == expected
+
+
+@pytest.mark.parametrize(
+    "tags",
+    [
+        {},
+        dict(_BOOTSTRAP_TAGS),
+        {"latest": "0.5.0-dev.6", "next": "0.5.0-dev.6"},
+        {"latest": "0.5.0-dev.6"},
+    ],
+)
+def test_should_publish_a_prerelease_to_latest_while_no_stable_release_exists(
+    tags: dict[str, object],
+) -> None:
+    # Given a package whose `latest` names nothing, the stub, or another prerelease
+    guard = _load_guard()
+    # When the next prerelease plans its channel and publish tag
+    # Then it moves `latest`, so a plain `npm install` gets it with no manual retag
+    assert guard.npm_release_channel("0.5.0-dev.7", tags) == "latest"
+    assert guard.npm_publish_tag("0.5.0-dev.7", tags) == "latest"
+
+
+def test_should_keep_prereleases_on_next_once_a_stable_release_exists() -> None:
+    # Given a stable 0.5.0 on `latest` and an older prerelease on `next`
+    guard = _load_guard()
+    tags: dict[str, object] = {"latest": "0.5.0", "next": "0.5.0-dev.7"}
+    # When a later prerelease plans its channel and publish tag
+    # Then `latest` stays on the stable release and only `next` moves
+    assert guard.npm_release_channel("0.6.0-dev.0", tags) == "next"
+    assert guard.npm_publish_tag("0.6.0-dev.0", tags) == "next"
+
+
+def test_should_move_latest_from_a_prerelease_to_the_first_stable_release() -> None:
+    # Given `latest` on a prerelease because no stable release existed yet
+    guard = _load_guard()
+    tags: dict[str, object] = {"latest": "0.5.0-dev.9", "next": "0.5.0-dev.6"}
+    # When the first stable release plans its tag
+    # Then it takes `latest` forward (0.5.0 sorts after every 0.5.0-dev.N)
+    assert guard.npm_release_channel("0.5.0", tags) == "latest"
+    assert guard.npm_publish_tag("0.5.0", tags) == "latest"
+
+
+def test_should_plan_the_registry_decision_on_latest_before_any_stable_release(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    # Given the live dev.6 registry state and an unpublished 0.5.0-dev.7 archive
+    guard = _load_guard()
+    package = {"dist-tags": {"latest": "0.5.0-dev.6", "next": "0.5.0-dev.6"}}
+    monkeypatch.setattr(guard, "_npm_artifact", lambda _root, _version: tmp_path)
+    served = {"https://registry.npmjs.org/%40gainratio%2Fassay": package}
+    monkeypatch.setattr(guard, "_fetch_json", served.get)
+    monkeypatch.setattr(guard, "_provenance_identity", lambda _tarball: None)
+    monkeypatch.setattr(guard, "npm_release_state", lambda *_args: True)
+    # When the candidate's publication plan is computed
+    decision = guard._npm_state(tmp_path, "0.5.0-dev.7")
+    # Then the plan the publish job rechecks and the verifier reads names `latest`
+    assert (decision.channel, decision.publish_tag, decision.channel_version) == (
+        "latest",
+        "latest",
+        "0.5.0-dev.6",
+    )
 
 
 def test_should_still_refuse_an_unparseable_latest_that_is_not_the_placeholder() -> None:
@@ -512,12 +575,13 @@ def test_should_reject_a_version_specific_tag_collision() -> None:
 
 
 def test_should_fail_closed_on_cross_channel_registry_state() -> None:
-    # Given an externally corrupted canonical tag pointing at another release channel
+    # Given an externally corrupted `next` tag pointing at a stable release
+    # (`latest` on a prerelease is legitimate now: it means no stable release exists yet)
     guard = _load_guard()
     # When a publish decision is selected
     # Then it cannot be treated as a same-channel semver comparison
     with pytest.raises(ValueError, match="npm channel contains an incompatible version"):
-        guard.npm_publish_tag("1.2.3", {"latest": "1.2.4-dev.0"})
+        guard.npm_publish_tag("1.2.5-dev.0", {"latest": "1.2.3", "next": "1.2.4"})
 
 
 _PLACEHOLDER_RECORD: dict[str, object] = {
@@ -588,6 +652,14 @@ def test_should_accept_a_prerelease_publish_when_latest_is_a_real_release() -> N
     verifier._verify_tags(package, "0.5.0-dev.4", "next", "next", True)
 
 
+def test_should_accept_a_prerelease_published_to_latest_before_any_stable_release() -> None:
+    # Given a prerelease that took `latest` itself, with `next` left on an older one
+    verifier = _load_module("scripts.verify_published_release")
+    package = _package_document({"latest": "0.5.0-dev.4", "next": "0.5.0-dev.3"})
+    # Then post-publish verification accepts the plan's `latest` channel (no exception)
+    verifier._verify_tags(package, "0.5.0-dev.4", "latest", "latest", True)
+
+
 def test_should_refuse_a_stable_publish_that_leaves_latest_on_an_older_release() -> None:
     # Given a stable 0.5.0 publish whose latest tag still names 0.4.0
     verifier = _load_module("scripts.verify_published_release")
@@ -628,12 +700,13 @@ def test_should_define_one_exact_mutation_set_across_both_runtimes() -> None:
     names = tuple(mutation.name for mutation in harness.MUTATIONS)
     runners = {mutation.runner for mutation in harness.MUTATIONS}
     # Then the set is non-vacuous, unique, scoring-only, and cross-runtime
-    assert len(names) == 121
+    assert len(names) == 122
     assert len(names) == len(set(names))
     assert runners == {"pytest", "vitest"}
     assert sum(mutation.runner == "vitest" for mutation in harness.MUTATIONS) == 31
     assert "npm-release-quarantine-is-24h" in names
     assert "npm-latest-must-be-installable" in names
+    assert "npm-prerelease-takes-latest-until-stable" in names
     assert all("envelope" not in name and "ledger" not in name for name in names)
     assert all(not mutation.target.startswith("src/avow/") for mutation in harness.MUTATIONS)
     source = Path("scripts/mutation_harness.py").read_text(encoding="utf-8")
