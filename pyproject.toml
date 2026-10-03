@@ -1,5 +1,5 @@
 [build-system]
-requires = ["hatchling==1.27.0"]
+requires = ["hatchling==1.32.4"]
 build-backend = "hatchling.build"
 
 [project]
@@ -20,14 +20,14 @@ classifiers = [
 ]
 
 dependencies = [
-    "pydantic>=2.11",
+    "pydantic>=2.13.5",
 ]
 
 [project.optional-dependencies]
 metrics = [
-    "pydantic-settings>=2.11",
-    "scikit-learn>=1.9",  # precision/recall/F1, PR-AUC, ROC-AUC, Brier
-    "scipy>=1.18",        # scipy.stats.bootstrap confidence intervals
+    "pydantic-settings>=2.15.0",
+    "scikit-learn>=1.9.1",  # precision/recall/F1, PR-AUC, ROC-AUC, Brier
+    "scipy>=1.18.1",        # scipy.stats.bootstrap confidence intervals
     "numpy>=2.5.3",       # array math shared by sklearn + scipy
     # trec_eval's own arithmetic for the ranking face (nDCG, AP, P@k, R@k, RR). Exactly
     # one transitive dependency — pytrec-eval-terrier, the C++ binding to the reference
@@ -40,13 +40,13 @@ cli = [
 
 [dependency-groups]
 dev = [
-    "dagger-io==0.21.8",
-    "hatchling==1.27.0",
+    "dagger-io==0.21.9",
+    "hatchling==1.32.4",
     "pip-audit==2.10.1",
     "pytest>=9.1.1",
     "pytest-cov>=6.0",
     "mypy>=2.3.1",
-    "ruff>=0.15.21",
+    "ruff>=0.16.9",
     "xenon>=0.9",
     "radon>=6.0",
     "poethepoet>=0.48.0",
