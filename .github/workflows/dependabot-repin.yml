@@ -1,0 +1,124 @@
+# Re-pins the npm archive digest on Dependabot npm pull requests.
+#
+# Why: the packed npm archive embeds package.json, so every dev-tool bump moves its
+# sha256 even when the shipped code is byte-identical. The pin tests are right to fail;
+# this workflow does the re-pin a human used to do, and the pin tests stay as strict.
+#
+# Security shape (GitHub docs: "Automating Dependabot with GitHub Actions" and
+# "Troubleshooting Dependabot on GitHub Actions"):
+# - Triggered by `pull_request` only, with no privileged base-context trigger. Dependabot runs get a read-only
+#   GITHUB_TOKEN by default and no Actions secrets; the `permissions` key raises the
+#   token per job. No secrets are used at all.
+# - Jobs run only when the PR author is dependabot[bot] and the head branch lives in
+#   this repository, never on the triggering actor, which a re-run can change.
+# - `derive` runs the dependency code (the Dagger `artifacts` build) with a read-only
+#   token and hands back one string: a sha256, which `repin` re-validates.
+# - `repin` holds the write token and executes no dependency code: it runs the tool
+#   from the trusted base commit, edits three text literals, and commits through the
+#   GraphQL API bound to the exact head SHA, so a concurrent Dependabot push wins.
+# - A GITHUB_TOKEN commit does not start a normal CI run, so `repin` dispatches the
+#   Dagger workflow on the branch (workflow_dispatch always creates a run) and cancels
+#   the now-stale run on the superseded commit.
+name: Dependabot re-pin
+on:
+  pull_request:
+    branches: [main]
+permissions: {}
+concurrency:
+  group: assay-repin-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+jobs:
+  derive:
+    name: Derive npm archive digest
+    if: >-
+      github.event.pull_request.user.login == 'dependabot[bot]' &&
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      startsWith(github.head_ref, 'dependabot/npm_and_yarn/')
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    outputs:
+      decision: ${{ steps.classify.outputs.decision }}
+      digest: ${{ steps.classify.outputs.digest }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.pull_request.base.sha }}
+          path: base
+          persist-credentials: false
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          path: head
+          persist-credentials: false
+      - uses: dagger/dagger-for-github@27b130bf0f79a7f6fbbbe0fbca6760dc9bb40a77 # v8.4.1
+        with:
+          version: "0.21.8"
+          verb: call
+          workdir: base
+          args: artifacts export --path=../out/base
+      - uses: dagger/dagger-for-github@27b130bf0f79a7f6fbbbe0fbca6760dc9bb40a77 # v8.4.1
+        with:
+          version: "0.21.8"
+          verb: call
+          workdir: head
+          args: artifacts export --path=../out/head
+      - id: classify
+        run: |
+          python3 base/scripts/repin_npm_archive.py classify out/base/npm/*.tgz out/head/npm/*.tgz \
+            | tee -a "$GITHUB_OUTPUT" "$GITHUB_STEP_SUMMARY"
+  repin:
+    name: Commit re-pinned digest
+    needs: derive
+    if: needs.derive.outputs.decision == 'auto'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write # commit the three re-pinned literals to the Dependabot branch
+      actions: write # dispatch Dagger on the new commit and cancel the superseded run
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.pull_request.base.sha }}
+          path: base
+          persist-credentials: false
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          path: head
+          persist-credentials: false
+      - env:
+          DIGEST: ${{ needs.derive.outputs.digest }}
+          BRANCH: ${{ github.head_ref }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          REPOSITORY: ${{ github.repository }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          tool=base/scripts/repin_npm_archive.py
+          mapfile -t changed < <(python3 "$tool" rewrite --root head --digest "$DIGEST")
+          if [ "${#changed[@]}" -eq 0 ] || [ -z "${changed[0]}" ]; then
+            echo "digest already pinned; nothing to commit"
+            exit 0
+          fi
+          python3 "$tool" commit-request --root head --repository "$REPOSITORY" \
+            --branch "$BRANCH" --head-sha "$HEAD_SHA" "${changed[@]}" > request.json
+          gh api graphql --input request.json
+          gh workflow run dagger.yml --repo "$REPOSITORY" --ref "$BRANCH"
+          gh run list --repo "$REPOSITORY" --workflow dagger.yml --commit "$HEAD_SHA" \
+            --json databaseId,status --jq '.[] | select(.status != "completed") | .databaseId' \
+            | xargs -r -n1 gh run cancel --repo "$REPOSITORY"
+  explain:
+    name: Explain manual re-pin
+    needs: derive
+    if: needs.derive.outputs.decision == 'review'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      pull-requests: write # comment why this bump needs a human re-pin
+    steps:
+      - env:
+          GH_TOKEN: ${{ github.token }}
+          PR_URL: ${{ github.event.pull_request.html_url }}
+        run: |
+          gh pr comment "$PR_URL" --body "Not re-pinned automatically: this bump changes shipped bytes of the npm archive (built code, runtime manifest fields, or the file list), not only devDependencies. A human must review the archive diff, then update EXPECTED_ARCHIVE_SHA256 in ts/src/packageArtifact.test.ts, tests/test_example.py and tests/test_workflow_contract.py. The derive job summary names the changed members."

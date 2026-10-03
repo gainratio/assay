@@ -1,3 +1,6 @@
+# One grouped PR per ecosystem per week for minor and patch updates; majors arrive as
+# separate PRs. npm group bumps get the archive digest re-pinned by
+# .github/workflows/dependabot-repin.yml when shipped bytes are unchanged.
 version: 2
 
 # Why this file exists: every `uses:` in this repo is SHA-pinned, and a SHA pin does not
@@ -29,6 +32,7 @@ updates:
     groups:
       actions:
         patterns: ["*"]
+        update-types: ["minor", "patch"]
     labels:
       - dependencies
       - github-actions
@@ -47,6 +51,7 @@ updates:
     groups:
       npm:
         patterns: ["*"]
+        update-types: ["minor", "patch"]
     labels:
       - dependencies
       - npm
@@ -65,6 +70,7 @@ updates:
     groups:
       python:
         patterns: ["*"]
+        update-types: ["minor", "patch"]
     labels:
       - dependencies
       - python
