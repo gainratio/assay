@@ -14,6 +14,23 @@ re-pin a human used to do by hand, without loosening the pin check:
 
 The tests that compare the pinned digest with a fresh build stay as strict as
 before: a wrong digest still fails CI.
+
+Security shape of .github/workflows/dependabot-repin.yml (GitHub docs: "Automating
+Dependabot with GitHub Actions", "Troubleshooting Dependabot on GitHub Actions",
+"Triggering a workflow from a workflow"):
+
+* Triggered by ``pull_request`` only. Dependabot runs get a read-only token and no
+  Actions secrets; ``permissions`` raises it per job. No secrets are used.
+* Jobs run only for same-repository PRs authored by ``dependabot[bot]``
+  (``github.event.pull_request.user.login``), never on the triggering actor.
+* ``derive`` runs dependency code (the Dagger build) read-only and hands back one
+  sha256, which ``rewrite`` re-validates. A forged digest can only yield a wrong pin,
+  which the unchanged pin tests reject.
+* ``repin`` holds the write token and runs no dependency code: this tool comes from
+  the base commit and only edits text. A GITHUB_TOKEN commit starts no CI run, so it
+  dispatches Dagger (dispatch always runs) and cancels the superseded run.
+* ``explain`` comments on PRs that need a human: shipped bytes changed, or a GitHub
+  Action SHA pin moved (those pins record a human review and are never automated).
 """
 
 from __future__ import annotations
@@ -45,6 +62,21 @@ MUTATION: Final = (
     "{ createCommitOnBranch(input: $input) { commit { oid url } } }"
 )
 HEADLINE: Final = "test: re-pin npm archive digest for the dev-tool bump"
+EXPLANATIONS: Final = {
+    "archive": (
+        "Not re-pinned automatically: this bump changes shipped bytes of the npm archive "
+        "(built code, runtime manifest fields, or the file list), not only devDependencies. "
+        "A human must review the archive diff (the `derive` job summary names the changed "
+        "members), then update EXPECTED_ARCHIVE_SHA256 in "
+        f"{', '.join(map(str, PIN_SITES))}."
+    ),
+    "actions": (
+        "Needs a human re-pin by design: GitHub Action SHA pins record a review of an "
+        "external release, so they are never updated automatically. Review the release "
+        "diff for each bumped action, then update the reviewed pins in "
+        "tests/test_workflow_contract.py and tests/test_workflow_security.py."
+    ),
+}
 BODY: Final = (
     "Automated by .github/workflows/dependabot-repin.yml. The packed archive changed\n"
     "only in package.json devDependencies; every shipped member is byte-identical to\n"
@@ -154,8 +186,14 @@ def commit_request(
 
 
 def _parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(description=__doc__.splitlines()[0] if __doc__ else None)
+    parser = argparse.ArgumentParser(description="Re-pin the npm archive digest.")
     commands = parser.add_subparsers(dest="command", required=True)
+    commands.add_parser("explain").add_argument("kind", choices=sorted(EXPLANATIONS))
+    _add_pin_commands(commands)
+    return parser
+
+
+def _add_pin_commands(commands: argparse._SubParsersAction[argparse.ArgumentParser]) -> None:
     verdict = commands.add_parser("classify")
     verdict.add_argument("base", type=Path)
     verdict.add_argument("head", type=Path)
@@ -166,7 +204,6 @@ def _parser() -> argparse.ArgumentParser:
     for flag in ("--root", "--repository", "--branch", "--head-sha"):
         commit.add_argument(flag, required=True)
     commit.add_argument("paths", nargs="+", type=Path)
-    return parser
 
 
 def _classify_lines(arguments: argparse.Namespace) -> list[str]:
@@ -184,7 +221,12 @@ def _commit_lines(arguments: argparse.Namespace) -> list[str]:
     return [json.dumps(request)]
 
 
+def _explain_lines(arguments: argparse.Namespace) -> list[str]:
+    return [EXPLANATIONS[arguments.kind]]
+
+
 COMMANDS: Final = {
+    "explain": _explain_lines,
     "classify": _classify_lines,
     "rewrite": _rewrite_lines,
     "commit-request": _commit_lines,

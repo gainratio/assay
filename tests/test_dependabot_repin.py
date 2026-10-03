@@ -238,3 +238,28 @@ def test_should_require_review_when_a_non_object_manifest_changes() -> None:
     head = _archive({"package/package.json": b"[2]", "package/dist/index.js": b""})
 
     assert classify(base, head).decision == "review"
+
+
+@pytest.mark.parametrize(
+    ("kind", "names"),
+    [
+        ("archive", ("EXPECTED_ARCHIVE_SHA256", *map(str, PIN_SITES))),
+        ("actions", ("tests/test_workflow_contract.py", "tests/test_workflow_security.py")),
+    ],
+)
+def test_should_explain_each_manual_repin_and_where_to_make_it(
+    kind: str, names: tuple[str, ...], capsys: pytest.CaptureFixture[str]
+) -> None:
+    # Given / When
+    status = main(["explain", kind])
+
+    # Then
+    message = capsys.readouterr().out
+    assert status == 0
+    assert "human" in message
+    assert all(name in message for name in names)
+
+
+def test_should_refuse_an_unknown_explanation() -> None:
+    with pytest.raises(SystemExit):
+        main(["explain", "other"])

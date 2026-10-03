@@ -454,3 +454,26 @@ def test_should_check_out_both_sides_by_immutable_sha() -> None:
         ]
         * 2
     )
+
+
+def test_should_explain_manual_repins_once_without_dependency_code() -> None:
+    # Given
+    workflow = _workflow("dependabot-repin.yml")
+    job = _job(workflow, "explain")
+
+    # When
+    condition = " ".join(str(job["if"]).split())
+    runs = [str(step["run"]) for step in _steps(job) if "run" in step]
+
+    # Then
+    assert condition.startswith("always() && github.event.action == 'opened' && ")
+    assert "github.event.pull_request.user.login == 'dependabot[bot]'" in condition
+    assert "github.event.pull_request.head.repo.full_name == github.repository" in condition
+    assert "startsWith(github.head_ref, 'dependabot/github_actions/')" in condition
+    assert [str(_with(step)["ref"]) for step in _steps(job) if "uses" in step] == [
+        "${{ github.event.pull_request.base.sha }}"
+    ]
+    assert runs == [
+        'python3 base/scripts/repin_npm_archive.py explain "$KIND" '
+        '| gh pr comment "$PR_URL" --body-file -'
+    ]

@@ -839,5 +839,7 @@ def test_should_reduce_the_total_dagger_and_workflow_surface() -> None:
     # Then (budget raised from 700 to 720 for the two central lineage steps in publish.yml,
     # hseshadr/ci#49: required publisher surface, not new repository logic; then to 780
     # for npm's validated GitHub Actions provenance context, without which npm cannot
-    # detect Actions, exchange OIDC, or sign provenance inside the Dagger container)
-    assert 400 <= lines <= 780
+    # detect Actions, exchange OIDC, or sign provenance inside the Dagger container; then
+    # to 860 for dependabot-repin.yml, which replaces the human re-pin of the npm archive
+    # digest on every Dependabot dev-tool bump; its logic lives in scripts/, not here)
+    assert 400 <= lines <= 860
