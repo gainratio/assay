@@ -100,7 +100,7 @@ def test_should_make_ci_one_checkout_and_one_dagger_call() -> None:
     assert set(_mapping(workflow["on"])) == {"push", "pull_request"}
     assert _uses(job) == (
         "actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1",
-        "dagger/dagger-for-github@496f1b3d8b0d823834c13e67cf8a8e08ca3b9602",
+        "dagger/dagger-for-github@27b130bf0f79a7f6fbbbe0fbca6760dc9bb40a77",
     )
     assert all("run" not in step for step in _steps(job))
     assert _with(dagger_step) == {
