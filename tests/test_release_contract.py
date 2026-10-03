@@ -702,9 +702,9 @@ def _rewrite_manifest(root: Path) -> None:
 @pytest.mark.parametrize(
     "relative",
     [
-        "python/assay_engine-0.5.0.dev4-py3-none-any.whl",
-        "python/assay_engine-0.5.0.dev4.tar.gz",
-        "npm/gainratio-assay-0.5.0-dev.4.tgz",
+        "python/assay_engine-0.5.0.dev5-py3-none-any.whl",
+        "python/assay_engine-0.5.0.dev5.tar.gz",
+        "npm/gainratio-assay-0.5.0-dev.5.tgz",
     ],
 )
 def test_should_reject_renamed_release_artifacts_even_with_a_new_manifest(
@@ -783,8 +783,8 @@ def _rewrite_wheel_dist_info(path: Path) -> None:
 @pytest.mark.parametrize(
     ("relative", "link_type"),
     [
-        ("python/assay_engine-0.5.0.dev4.tar.gz", tarfile.SYMTYPE),
-        ("npm/gainratio-assay-0.5.0-dev.4.tgz", tarfile.LNKTYPE),
+        ("python/assay_engine-0.5.0.dev5.tar.gz", tarfile.SYMTYPE),
+        ("npm/gainratio-assay-0.5.0-dev.5.tgz", tarfile.LNKTYPE),
     ],
 )
 def test_should_reject_every_nonregular_tar_member(
@@ -805,8 +805,8 @@ def test_should_reject_every_nonregular_tar_member(
 @pytest.mark.parametrize(
     ("relative", "mode"),
     [
-        ("python/assay_engine-0.5.0.dev4.tar.gz", "sdist-root"),
-        ("npm/gainratio-assay-0.5.0-dev.4.tgz", "npm-alias"),
+        ("python/assay_engine-0.5.0.dev5.tar.gz", "sdist-root"),
+        ("npm/gainratio-assay-0.5.0-dev.5.tgz", "npm-alias"),
     ],
 )
 def test_should_reject_noncanonical_or_wrong_root_tar_members(
