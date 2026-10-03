@@ -115,7 +115,7 @@ def test_should_single_source_assay_development_version() -> None:
     assert version_config["path"] == expected_path
     assert (ROOT / expected_path).is_file()
     version_module = runpy.run_path(ROOT / expected_path)
-    assert version_module["__version__"] == "0.5.0.dev4"
+    assert version_module["__version__"] == "0.5.0.dev5"
 
 
 def test_should_install_assay_console_script() -> None:

@@ -4,6 +4,12 @@
 
 ### Changed
 
+- **Next prerelease is `0.5.0-dev.5`** (Python `assay-engine` `0.5.0.dev5`, npm
+  `@gainratio/assay` `0.5.0-dev.5`). Nothing was published as `0.5.0-dev.4`: its release
+  candidate stopped at the identity check because the Dagger step had no
+  `refs/remotes/origin/main`. That check now derives the protected-main ref (#89), and
+  the `v0.5.0-dev.4` tag sits on a commit that is no longer `main`, so the version
+  moves on. No scoring change. The pinned npm archive SHA-256 is `6f929410…5f3cd9af`.
 - **npm package renamed to `@gainratio/assay`; old name deprecated.** The next
   prerelease, `0.5.0-dev.4` (Python `assay-engine` `0.5.0.dev4`), ships only as
   `@gainratio/assay`. `@edgeproc/assay` `0.5.0-dev.3` and older keep installing.

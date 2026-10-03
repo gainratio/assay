@@ -3,10 +3,10 @@
 > **TL;DR:** `@gainratio/assay` validates explicit scoring requests, combines them with
 > one of three methods, and returns every ordered contribution.
 
-> **Status:** `@gainratio/assay` 0.5.0-dev.4 is the authorized prerelease. Check npm before installing.
+> **Status:** `@gainratio/assay` 0.5.0-dev.5 is the authorized prerelease. Check npm before installing.
 
 The package is dependency-free, ESM-only, and requires Node 22.13 or newer. After npm
-lists this exact version, install it with `npm install @gainratio/assay@0.5.0-dev.4`.
+lists this exact version, install it with `npm install @gainratio/assay@0.5.0-dev.5`.
 The checkout build below works regardless of registry state.
 
 ## Build the tarball
@@ -23,11 +23,11 @@ corepack pnpm gate
 mkdir -p "${TMPDIR:-/tmp}/assay-pack"
 corepack pnpm pack --pack-destination "${TMPDIR:-/tmp}/assay-pack"
 node scripts/normalize-package-archive.mjs \
-  "${TMPDIR:-/tmp}/assay-pack/gainratio-assay-0.5.0-dev.4.tgz"
+  "${TMPDIR:-/tmp}/assay-pack/gainratio-assay-0.5.0-dev.5.tgz"
 ```
 
 The version lines must print `v22.13.0` and `11.5.0`. The final command produces
-`gainratio-assay-0.5.0-dev.4.tgz` under `${TMPDIR:-/tmp}/assay-pack`. Install that file
+`gainratio-assay-0.5.0-dev.5.tgz` under `${TMPDIR:-/tmp}/assay-pack`. Install that file
 in a separate Node 22 application, then import only from the package root.
 
 ## Compose a typed score
