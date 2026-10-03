@@ -873,5 +873,7 @@ def test_should_reduce_the_total_dagger_and_workflow_surface() -> None:
     # detect Actions, exchange OIDC, or sign provenance inside the Dagger container; then
     # to 850 for dependabot-repin.yml, which replaces the human re-pin of the npm archive
     # digest on every Dependabot dev-tool bump; its logic lives in scripts/, not here; then
-    # to 860 for the GHCR mirror engine env on two workflows and the split mirror image ref)
-    assert 400 <= lines <= 860
+    # to 860 for the GHCR mirror engine env on two workflows and the split mirror image ref;
+    # then to 895 because the hseshadr/ci fleet policy forbids run steps, so the re-pin's
+    # three jobs moved into the repin-classify/commit/explain Dagger functions)
+    assert 400 <= lines <= 895

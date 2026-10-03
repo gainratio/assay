@@ -31,6 +31,7 @@ NPM_PUBLISHER_SHA512: Final = (
 PNPM_VERSION: Final = "11.5.0"
 REPOSITORY: Final = "hseshadr/assay"
 REPOSITORY_URL: Final = f"https://github.com/{REPOSITORY}.git"
+REPIN_COMMAND: Final = ("python", "/opt/repin/repin_npm_archive.py")
 SHA_LENGTH: Final = 40
 PYTHON_ARTIFACT_COUNT: Final = 2
 CANDIDATE_ROOTS: Final = ["CANDIDATE-SHA256SUMS", "publication/", "publish-tools/", "release/"]
@@ -162,6 +163,50 @@ class Assay:
         await self._release_evidence(complete).sync()
         await self._security(complete)
         await self._artifact_container(complete).sync()
+
+    @function
+    async def repin_classify(self, head_sha: str) -> str:
+        """Classify a Dependabot head's npm archive against base; print the JSON verdict."""
+        self._require_sha(head_sha)
+        head = self._release_source(head_sha).filter(exclude=SOURCE_EXCLUDES)
+        base_npm = self._release_npm(self.source)
+        head_npm = self._release_npm(head)
+        base_name, head_name = await self._one_archive(base_npm), await self._one_archive(head_npm)
+        tool = self._repin_tool().with_directory("/in/base", base_npm)
+        tool = tool.with_directory("/in/head", head_npm)
+        command = ["classify", "--json", f"/in/base/{base_name}", f"/in/head/{head_name}"]
+        return await tool.with_exec([*REPIN_COMMAND, *command]).stdout()
+
+    @function(cache="never")  # type: ignore[call-overload,untyped-decorator]  # SDK stub gap
+    async def repin_commit(self, github_token: dagger.Secret, pr_number: int, digest: str) -> str:
+        """Commit a classified digest to one guarded Dependabot npm pull request."""
+        return await self._repin_api(github_token, "run", pr_number, "--digest", digest)
+
+    @function(cache="never")  # type: ignore[call-overload,untyped-decorator]  # SDK stub gap
+    async def repin_explain(self, github_token: dagger.Secret, pr_number: int, kind: str) -> str:
+        """Comment why one guarded Dependabot pull request needs a human re-pin."""
+        return await self._repin_api(github_token, "comment", pr_number, "--kind", kind)
+
+    async def _repin_api(self, token: dagger.Secret, verb: str, pr: int, *rest: str) -> str:
+        command = [*REPIN_COMMAND, verb, "--repository", REPOSITORY, "--pr", str(pr), *rest]
+        tool = self._repin_tool().with_secret_variable("GH_TOKEN", token)
+        return await tool.with_exec(command).stdout()
+
+    def _release_npm(self, source: dagger.Directory) -> dagger.Directory:
+        complete = self._source_with_history(source)
+        return self._artifact_container(complete).directory("/release/npm")
+
+    def _repin_tool(self) -> dagger.Container:
+        script = self.source.file("scripts/repin_npm_archive.py")
+        container = dag.container().from_(PYTHON_IMAGE).with_file(REPIN_COMMAND[1], script)
+        return container.with_user("65532:65532")
+
+    @staticmethod
+    async def _one_archive(npm: dagger.Directory) -> str:
+        names = await npm.glob("*.tgz")
+        if len(names) != 1:
+            raise ValueError(f"expected one npm archive, found {names}")
+        return names[0]
 
     @function
     async def release_candidate(
