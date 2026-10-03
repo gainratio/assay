@@ -23,7 +23,7 @@ jobs:
     steps:
       # A dispatch on a TAG named `main` passes the `if` above. The central lineage proof
       # (hseshadr/ci#49) requires a successful release-candidate.yml run whose SHA is on main.
-      - uses: dagger/dagger-for-github@496f1b3d8b0d823834c13e67cf8a8e08ca3b9602 # v8.4.0
+      - uses: dagger/dagger-for-github@27b130bf0f79a7f6fbbbe0fbca6760dc9bb40a77 # v8.4.1
         env:
           GH_TOKEN: ${{ github.token }}
           RUN_ID: ${{ github.event.workflow_run.id }}
@@ -33,7 +33,7 @@ jobs:
           verb: call
           module: github.com/hseshadr/ci/modules/portfolio-foundation@3de1c4bef2558fd6610b6dda1504b657de7a954d
           args: release-lineage --github-token=env:GH_TOKEN --repository="$GITHUB_REPOSITORY" --run-id="$RUN_ID" --head-sha="$HEAD_SHA" --publish-run-id="$GITHUB_RUN_ID"
-      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
           name: assay-${{ github.event.workflow_run.head_sha }}
           path: candidate
@@ -41,7 +41,7 @@ jobs:
           run-id: ${{ github.event.workflow_run.id }}
       # Event values reach dagger-for-github's bash only as quoted variables.
       - id: plan
-        uses: dagger/dagger-for-github@496f1b3d8b0d823834c13e67cf8a8e08ca3b9602 # v8.4.0
+        uses: dagger/dagger-for-github@27b130bf0f79a7f6fbbbe0fbca6760dc9bb40a77 # v8.4.1
         env:
           HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
         with:
@@ -73,7 +73,7 @@ jobs:
       # release-provenance runs that same proof, then writes github-context.json: the GitHub
       # Actions context npm needs (to detect Actions, exchange OIDC, and sign provenance),
       # taken from this publish run's own record and kept outside the candidate.
-      - uses: dagger/dagger-for-github@496f1b3d8b0d823834c13e67cf8a8e08ca3b9602 # v8.4.0
+      - uses: dagger/dagger-for-github@27b130bf0f79a7f6fbbbe0fbca6760dc9bb40a77 # v8.4.1
         env:
           GH_TOKEN: ${{ github.token }}
           RUN_ID: ${{ github.event.workflow_run.id }}
@@ -83,13 +83,13 @@ jobs:
           verb: call
           module: github.com/hseshadr/ci/modules/portfolio-foundation@3de1c4bef2558fd6610b6dda1504b657de7a954d
           args: release-provenance --github-token=env:GH_TOKEN --repository="$GITHUB_REPOSITORY" --run-id="$RUN_ID" --head-sha="$HEAD_SHA" --publish-run-id="$GITHUB_RUN_ID" export --path=github-context.json
-      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
           name: assay-${{ github.event.workflow_run.head_sha }}
           path: candidate
           github-token: ${{ github.token }}
           run-id: ${{ github.event.workflow_run.id }}
-      - uses: dagger/dagger-for-github@496f1b3d8b0d823834c13e67cf8a8e08ca3b9602 # v8.4.0
+      - uses: dagger/dagger-for-github@27b130bf0f79a7f6fbbbe0fbca6760dc9bb40a77 # v8.4.1
         env:
           HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
         with:
