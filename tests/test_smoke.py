@@ -13,4 +13,4 @@ def test_should_expose_development_version_when_imported() -> None:
     # When reading its version string
     version = assay.__version__
     # Then it matches the scoring-only split candidate
-    assert version == "0.5.0.dev5"
+    assert version == "0.5.0.dev6"

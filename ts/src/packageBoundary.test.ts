@@ -25,7 +25,7 @@ describe("the public Assay package boundary", () => {
     const manifest = await readManifest();
 
     expect(manifest.name).toBe("@gainratio/assay");
-    expect(manifest.version).toBe("0.5.0-dev.5");
+    expect(manifest.version).toBe("0.5.0-dev.6");
     expect(manifest.dependencies ?? {}).toEqual({});
   });
 
