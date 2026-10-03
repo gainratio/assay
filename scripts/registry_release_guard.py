@@ -293,16 +293,43 @@ def version_specific_tag(version: str) -> str:
     return f"assay-v{version.replace('.', '-')}"
 
 
-def _channel_version(version: str, tags: dict[str, object]) -> str | None:
+def _stable_release_exists(tags: dict[str, object]) -> bool:
+    latest = tags.get("latest")
+    if latest is None or latest == BOOTSTRAP_VERSION:
+        return False
+    if not isinstance(latest, str):
+        raise ValueError("npm registry metadata is malformed")
+    return npm_dist_tag(latest) == "latest"
+
+
+def npm_release_channel(version: str, tags: dict[str, object]) -> str:
+    """Pick the channel a release moves: prereleases own `latest` until a stable one exists.
+
+    Stable releases always go to `latest`, so `latest` naming a stable version is the
+    signal that one exists. Before that, a prerelease on `next` would leave a plain
+    `npm install` on an older release (or the bootstrap stub) until someone retags by hand.
+    """
     channel = npm_dist_tag(version)
+    if channel == "next" and not _stable_release_exists(tags):
+        return "latest"
+    return channel
+
+
+def _channel_version(version: str, tags: dict[str, object]) -> str | None:
+    channel = npm_release_channel(version, tags)
     current = tags.get(channel)
     if current is None or current == BOOTSTRAP_VERSION:
         return None
     if not isinstance(current, str):
         raise ValueError("npm registry metadata is malformed")
-    if npm_dist_tag(current) != channel:
-        raise ValueError("npm channel contains an incompatible version")
+    _require_compatible_channel(channel, current)
     return current
+
+
+def _require_compatible_channel(channel: str, current: str) -> None:
+    # `latest` may hold a prerelease (no stable release yet); `next` never holds a stable one.
+    if channel == "next" and npm_dist_tag(current) != channel:
+        raise ValueError("npm channel contains an incompatible version")
 
 
 def _checked_historical_tag(version: str, tags: dict[str, object]) -> str:
@@ -314,7 +341,7 @@ def _checked_historical_tag(version: str, tags: dict[str, object]) -> str:
 
 def npm_publish_tag(version: str, tags: dict[str, object]) -> str:
     """Select the default channel unless doing so would move it backward."""
-    channel = npm_dist_tag(version)
+    channel = npm_release_channel(version, tags)
     current = _channel_version(version, tags)
     if current is None or _version_key(current) <= _version_key(version):
         return channel
@@ -485,7 +512,7 @@ def _npm_state(root: Path, version: str) -> ReleaseDecision:
     encoded = urllib.parse.quote("@gainratio/assay", safe="")
     payload = _fetch_json(f"https://registry.npmjs.org/{encoded}/{version}")
     tags = _npm_tags(_fetch_json(f"https://registry.npmjs.org/{encoded}"))
-    channel = npm_dist_tag(version)
+    channel = npm_release_channel(version, tags)
     publish_tag = npm_publish_tag(version, tags)
     publish = npm_release_state(
         tarball, payload, _npm_attestation_payload(payload), _provenance_identity(tarball)

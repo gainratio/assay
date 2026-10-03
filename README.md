@@ -68,11 +68,10 @@ multiplied by its share of the total importance (2 out of 5 is 40%), and the res
 added up. The last line is a fingerprint of the exact input. Save it with the score and
 you can later check that a replay used the same input.
 
-3. Optional: run the same score in JavaScript (Node 22.13 or newer). Use the `@next`
-   tag, because npm's default tag still points at an empty placeholder.
+3. Optional: run the same score in JavaScript (Node 22.13 or newer).
 
 ```bash
-npm install @gainratio/assay@next
+npm install @gainratio/assay
 ```
 
 Save this as `laptop.mjs` and run `node laptop.mjs`:
@@ -152,8 +151,8 @@ npm install @gainratio/assay@0.5.0-dev.6
 
 On PyPI the package is called `assay-engine`, but you import it as `assay`. Plain
 `pip install assay-engine` gets the prerelease today because no stable version exists.
-On npm, `npm install @gainratio/assay` without a version installs an empty placeholder, so
-always give the version or the `@next` tag.
+On npm, plain `npm install @gainratio/assay` gets the same prerelease, for the same reason.
+Once a stable version ships, prereleases move to the `@next` tag instead.
 
 Extras for Python:
 
