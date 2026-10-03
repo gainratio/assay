@@ -263,3 +263,280 @@ def test_should_explain_each_manual_repin_and_where_to_make_it(
 def test_should_refuse_an_unknown_explanation() -> None:
     with pytest.raises(SystemExit):
         main(["explain", "other"])
+
+
+import scripts.repin_npm_archive as tool  # noqa: E402
+
+HEAD = "e" * 40
+REPOSITORY = "hseshadr/assay"
+
+
+class FakeGitHub:
+    """Serves one pull request and its head pin sites; records every write."""
+
+    def __init__(self, root: Path, pull: dict[str, object], runs: list[object]) -> None:
+        self.root = root
+        self.pull = pull
+        self.runs = runs
+        self.posts: list[tuple[str, object]] = []
+
+    def get_json(self, path: str) -> object:
+        if path == f"/repos/{REPOSITORY}/pulls/7":
+            return self.pull
+        assert path == f"/repos/{REPOSITORY}/actions/workflows/dagger.yml/runs?head_sha={HEAD}"
+        return {"workflow_runs": self.runs}
+
+    def get_text(self, path: str) -> str:
+        prefix, _, ref = path.partition("?ref=")
+        assert ref == HEAD
+        site = prefix.removeprefix(f"/repos/{REPOSITORY}/contents/")
+        return (self.root / site).read_text(encoding="utf-8")
+
+    def post_json(self, path: str, body: object) -> object:
+        self.posts.append((path, body))
+        return {"data": {"createCommitOnBranch": {"commit": {"oid": "f" * 40}}}}
+
+
+def _pull(
+    login: str = "dependabot[bot]",
+    repo: str = REPOSITORY,
+    ref: object = "dependabot/npm_and_yarn/x",
+) -> dict[str, object]:
+    head = {"ref": ref, "sha": HEAD, "repo": {"full_name": repo}}
+    return {"user": {"login": login}, "head": head}
+
+
+def _github(tmp_path: Path, pull: dict[str, object], runs: list[object]) -> FakeGitHub:
+    (tmp_path / "head").mkdir()
+    return FakeGitHub(_repository(tmp_path / "head"), pull, runs)
+
+
+def test_should_commit_the_new_digest_bound_to_the_head_and_cancel_its_ci(
+    tmp_path: Path,
+) -> None:
+    # Given
+    runs = [{"id": 11, "status": "queued"}, {"id": 12, "status": "completed"}]
+    github = _github(tmp_path, _pull(), runs)
+
+    # When
+    outcome = tool.repin_pull_request(github, REPOSITORY, 7, NEW)
+
+    # Then
+    (graphql, request), cancel = github.posts
+    commit_input = request["variables"]["input"]  # type: ignore[index]
+    assert graphql == "/graphql"
+    assert commit_input["expectedHeadOid"] == HEAD
+    assert commit_input["branch"]["branchName"] == "dependabot/npm_and_yarn/x"
+    additions = commit_input["fileChanges"]["additions"]
+    assert [item["path"] for item in additions] == [str(site) for site in PIN_SITES]
+    assert {base64.b64decode(item["contents"]).decode() for item in additions} == {_pinned(NEW)}
+    assert cancel == (f"/repos/{REPOSITORY}/actions/runs/11/cancel", {})
+    assert outcome == "re-pinned 3 sites; cancelled runs 11"
+
+
+def test_should_write_nothing_when_the_head_already_pins_the_digest(tmp_path: Path) -> None:
+    # Given
+    github = _github(tmp_path, _pull(), [])
+
+    # When
+    outcome = tool.repin_pull_request(github, REPOSITORY, 7, OLD)
+
+    # Then
+    assert github.posts == []
+    assert outcome == "digest already pinned"
+
+
+@pytest.mark.parametrize(
+    ("pull", "reason"),
+    [
+        (_pull(login="octocat"), "not opened by dependabot"),
+        (_pull(repo="fork/assay"), "not in hseshadr/assay"),
+        (_pull(ref="dependabot/uv/x"), "not a Dependabot npm branch"),
+        (_pull(ref=7), "malformed"),
+    ],
+)
+def test_should_refuse_any_pull_request_outside_the_dependabot_npm_guard(
+    tmp_path: Path, pull: dict[str, object], reason: str
+) -> None:
+    # Given
+    github = _github(tmp_path, pull, [])
+
+    # When / Then
+    with pytest.raises(RepinError, match=reason):
+        tool.repin_pull_request(github, REPOSITORY, 7, NEW)
+    assert github.posts == []
+
+
+def test_should_refuse_a_forged_digest_before_reading_the_pull_request(tmp_path: Path) -> None:
+    # Given
+    github = _github(tmp_path, _pull(), [])
+
+    # When / Then
+    with pytest.raises(RepinError, match="sha256"):
+        tool.repin_pull_request(github, REPOSITORY, 7, "$(id)")
+    assert github.posts == []
+
+
+def test_should_refuse_a_graphql_error_before_cancelling_anything(tmp_path: Path) -> None:
+    # Given
+    github = _github(tmp_path, _pull(), [{"id": 11, "status": "queued"}])
+    replies: list[object] = []
+
+    def failing_post(path: str, body: object) -> object:
+        replies.append(path)
+        return {"errors": [{"message": "head moved"}]}
+
+    github.post_json = failing_post  # type: ignore[method-assign]
+
+    # When / Then
+    with pytest.raises(RepinError, match="head moved"):
+        tool.repin_pull_request(github, REPOSITORY, 7, NEW)
+    assert replies == ["/graphql"]
+
+
+@pytest.mark.parametrize(
+    ("ref", "kind"),
+    [("dependabot/npm_and_yarn/x", "archive"), ("dependabot/github_actions/x", "actions")],
+)
+def test_should_comment_the_explanation_on_a_guarded_pull_request(
+    tmp_path: Path, ref: str, kind: str
+) -> None:
+    # Given
+    github = _github(tmp_path, _pull(ref=ref), [])
+
+    # When
+    outcome = tool.explain_pull_request(github, REPOSITORY, 7, kind)
+
+    # Then
+    assert github.posts == [
+        (f"/repos/{REPOSITORY}/issues/7/comments", {"body": tool.EXPLANATIONS[kind]})
+    ]
+    assert outcome == f"explained {kind} re-pin on #7"
+
+
+def test_should_refuse_to_comment_on_a_non_dependabot_pull_request(tmp_path: Path) -> None:
+    # Given
+    github = _github(tmp_path, _pull(login="octocat"), [])
+
+    # When / Then
+    with pytest.raises(RepinError, match="not opened by dependabot"):
+        tool.explain_pull_request(github, REPOSITORY, 7, "archive")
+    assert github.posts == []
+
+
+def test_should_classify_as_json_for_the_workflow_outputs(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    # Given
+    base, head = tmp_path / "base.tgz", tmp_path / "head.tgz"
+    base.write_bytes(_package(MANIFEST))
+    head.write_bytes(_package({**MANIFEST, "devDependencies": {"vitest": "5"}}))
+
+    # When
+    status = main(["classify", "--json", str(base), str(head)])
+
+    # Then
+    assert status == 0
+    verdict = json.loads(capsys.readouterr().out)
+    assert verdict["decision"] == "auto"
+    assert verdict["digest"] == hashlib.sha256(head.read_bytes()).hexdigest()
+
+
+@pytest.mark.parametrize(
+    "argv",
+    [
+        ["run", "--repository", REPOSITORY, "--pr", "7", "--digest", NEW],
+        ["comment", "--repository", REPOSITORY, "--pr", "7", "--kind", "archive"],
+    ],
+)
+def test_should_refuse_to_call_github_without_a_token(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str], argv: list[str]
+) -> None:
+    # Given
+    monkeypatch.delenv("GH_TOKEN", raising=False)
+
+    # When
+    status = main(argv)
+
+    # Then
+    assert status == 1
+    assert "GH_TOKEN" in capsys.readouterr().err
+
+
+def test_should_run_and_comment_against_the_rest_api_with_the_environment_token(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    # Given
+    seen: list[object] = []
+    monkeypatch.setenv("GH_TOKEN", "t0ken")
+    monkeypatch.setattr(tool, "repin_pull_request", lambda *a: seen.append(a) or "repinned")
+    monkeypatch.setattr(tool, "explain_pull_request", lambda *a: seen.append(a) or "explained")
+
+    # When
+    statuses = [
+        main(["run", "--repository", REPOSITORY, "--pr", "7", "--digest", NEW]),
+        main(["comment", "--repository", REPOSITORY, "--pr", "7", "--kind", "actions"]),
+    ]
+
+    # Then
+    assert statuses == [0, 0]
+    assert capsys.readouterr().out.split() == ["repinned", "explained"]
+    assert [call[1:] for call in seen] == [(REPOSITORY, 7, NEW), (REPOSITORY, 7, "actions")]  # type: ignore[index]
+    assert all(isinstance(call[0], tool.RestGitHub) for call in seen)  # type: ignore[index]
+
+
+class _Reply:
+    def __init__(self, body: bytes) -> None:
+        self.body = body
+
+    def __enter__(self) -> _Reply:
+        return self
+
+    def __exit__(self, *exc: object) -> None:
+        return None
+
+    def read(self) -> bytes:
+        return self.body
+
+
+def test_should_send_bearer_requests_with_the_matching_media_type(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    # Given
+    sent: list[tuple[str, str | None, str | None, bytes | None]] = []
+    replies = iter([b'{"a": 1}', b"raw text", b"", b'{"data": {}}'])
+
+    def fake_urlopen(request: object, timeout: int) -> _Reply:
+        sent.append(
+            (
+                request.full_url,  # type: ignore[attr-defined]
+                request.get_header("Authorization"),  # type: ignore[attr-defined]
+                request.get_header("Accept"),  # type: ignore[attr-defined]
+                request.data,  # type: ignore[attr-defined]
+            )
+        )
+        return _Reply(next(replies))
+
+    monkeypatch.setattr(tool.urllib.request, "urlopen", fake_urlopen)
+    github = tool.RestGitHub("t0ken", "https://api.test")
+
+    # When
+    results = [
+        github.get_json("/j"),
+        github.get_text("/t"),
+        github.post_json("/c", {}),
+        github.post_json("/g", {"q": 1}),
+    ]
+
+    # Then
+    assert results == [{"a": 1}, "raw text", None, {"data": {}}]
+    assert [item[0] for item in sent] == [f"https://api.test{p}" for p in ("/j", "/t", "/c", "/g")]
+    assert {item[1] for item in sent} == {"Bearer t0ken"}
+    assert sent[1][2] == "application/vnd.github.raw+json"
+    assert sent[3][3] == b'{"q": 1}'
+
+
+@pytest.mark.parametrize("base", ["file:///etc", "http://api.github.com"])
+def test_should_refuse_an_api_base_that_is_not_https(base: str) -> None:
+    with pytest.raises(RepinError, match="https"):
+        tool.RestGitHub("t0ken", base)

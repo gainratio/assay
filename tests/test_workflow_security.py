@@ -411,71 +411,89 @@ def test_should_run_the_repin_only_for_same_repository_dependabot_npm_prs() -> N
     assert "github.actor" not in (WORKFLOW_ROOT / "dependabot-repin.yml").read_text("utf-8")
 
 
+DAGGER_REPIN = "dagger/dagger-for-github@27b130bf0f79a7f6fbbbe0fbca6760dc9bb40a77"
+BASE_CHECKOUT = {"ref": "${{ github.event.pull_request.base.sha }}", "persist-credentials": "false"}
+PR_NUMBER = "${{ github.event.pull_request.number }}"
+REPIN_CALLS: dict[str, tuple[str, dict[str, str]]] = {
+    "derive": (
+        'repin-classify --head-sha="$HEAD_SHA"',
+        {"HEAD_SHA": "${{ github.event.pull_request.head.sha }}"},
+    ),
+    "repin": (
+        'repin-commit --github-token=env:GH_TOKEN --pr-number="$PR_NUMBER" --digest="$DIGEST"',
+        {
+            "GH_TOKEN": "${{ github.token }}",
+            "PR_NUMBER": PR_NUMBER,
+            "DIGEST": "${{ needs.derive.outputs.digest }}",
+        },
+    ),
+    "explain": (
+        'repin-explain --github-token=env:GH_TOKEN --pr-number="$PR_NUMBER" --kind="$KIND"',
+        {
+            "GH_TOKEN": "${{ github.token }}",
+            "PR_NUMBER": PR_NUMBER,
+            "KIND": "${{ needs.derive.outputs.decision == 'review' && 'archive' || 'actions' }}",
+        },
+    ),
+}
+
+
 def test_should_keep_dependency_code_away_from_the_write_token() -> None:
     # Given
     workflow = _workflow("dependabot-repin.yml")
 
     # When
     permissions = {name: _mapping(job)["permissions"] for name, job in _jobs(workflow).items()}
-    repin_runs = [str(step["run"]) for step in _steps(_job(workflow, "repin")) if "run" in step]
-    repin_uses = _uses(_job(workflow, "repin"))
+    derive = _job(workflow, "derive")
 
-    # Then
+    # Then: only the read-only job builds the head; the write jobs only edit text
     assert permissions == {
         "derive": {"contents": "read"},
         "repin": {"contents": "write", "actions": "write"},
         "explain": {"pull-requests": "write"},
     }
-    assert repin_uses == ("actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1",) * 2
-    builders = ("dagger call", "pnpm", "npm ", "uv run", "uv sync", "head/scripts")
-    assert not [run for run in repin_runs if any(builder in run for builder in builders)]
-    assert "tool=base/scripts/repin_npm_archive.py" in repin_runs[0]
-    assert '--head-sha "$HEAD_SHA"' in repin_runs[0]
-    assert "gh workflow run" not in repin_runs[0]
-    assert "gh run cancel" in repin_runs[0]
+    assert _mapping(derive["outputs"]) == {
+        "decision": "${{ fromJSON(steps.classify.outputs.output).decision }}",
+        "digest": "${{ fromJSON(steps.classify.outputs.output).digest }}",
+    }
 
 
-def test_should_check_out_both_sides_by_immutable_sha() -> None:
-    # Given
-    workflow = _workflow("dependabot-repin.yml")
+@pytest.mark.parametrize("name", sorted(REPIN_CALLS))
+def test_should_run_each_repin_job_as_base_checkout_then_one_dagger_call(name: str) -> None:
+    # Given: the hseshadr/ci fleet policy accepts only checkout then Dagger, no run step
+    job = _job(_workflow("dependabot-repin.yml"), name)
+    args, env = REPIN_CALLS[name]
 
     # When
-    refs = [
-        str(_with(step)["ref"])
-        for name in ("derive", "repin")
-        for step in _steps(_job(workflow, name))
-        if str(step.get("uses", "")).startswith("actions/checkout@")
-    ]
+    steps = _steps(job)
 
-    # Then
-    assert (
-        refs
-        == [
-            "${{ github.event.pull_request.base.sha }}",
-            "${{ github.event.pull_request.head.sha }}",
-        ]
-        * 2
-    )
+    # Then: the base commit's module and tool do the work; event values arrive by env
+    assert _uses(job) == ("actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1", DAGGER_REPIN)
+    assert not [step for step in steps if "run" in step]
+    assert _with(steps[0]) == BASE_CHECKOUT
+    assert _mapping(steps[1].get("env")) == env
+    assert _with(steps[1]) == {"version": "0.21.8", "verb": "call", "args": args}
 
 
-def test_should_explain_manual_repins_once_without_dependency_code() -> None:
+def test_should_explain_manual_repins_once() -> None:
     # Given
-    workflow = _workflow("dependabot-repin.yml")
-    job = _job(workflow, "explain")
+    job = _job(_workflow("dependabot-repin.yml"), "explain")
 
     # When
     condition = " ".join(str(job["if"]).split())
-    runs = [str(step["run"]) for step in _steps(job) if "run" in step]
 
     # Then
     assert condition.startswith("always() && github.event.action == 'opened' && ")
     assert "github.event.pull_request.user.login == 'dependabot[bot]'" in condition
     assert "github.event.pull_request.head.repo.full_name == github.repository" in condition
     assert "startsWith(github.head_ref, 'dependabot/github_actions/')" in condition
-    assert [str(_with(step)["ref"]) for step in _steps(job) if "uses" in step] == [
-        "${{ github.event.pull_request.base.sha }}"
-    ]
-    assert runs == [
-        'python3 base/scripts/repin_npm_archive.py explain "$KIND" '
-        '| gh pr comment "$PR_URL" --body-file -'
-    ]
+
+
+def test_should_expose_the_repin_graph_with_typed_tokens() -> None:
+    # Given
+    module = (ROOT / ".dagger/src/assay_dagger/main.py").read_text(encoding="utf-8")
+
+    # Then
+    assert "def repin_classify(self, head_sha: str)" in module
+    assert "github_token: dagger.Secret, pr_number: int, digest: str" in module
+    assert "github_token: dagger.Secret, pr_number: int, kind: str" in module
