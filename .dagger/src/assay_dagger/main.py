@@ -29,8 +29,10 @@ NPM_PUBLISHER_SHA512: Final = (
     "9d31cd8e92c3b70956bd2ecc72833a57b4b3098f5bfa7943"
 )
 PNPM_VERSION: Final = "11.5.0"
-REPOSITORY: Final = "hseshadr/assay"
-REPOSITORY_URL: Final = f"https://github.com/{REPOSITORY}.git"
+DEFAULT_REPOSITORY: Final = "hseshadr/assay"
+# The run's repository must be exactly one of these two (hseshadr -> gainratio org move).
+ALLOWED_REPOSITORIES: Final = ("hseshadr/assay", "gainratio/assay")
+ALLOWED_PATTERN: Final = "(?:" + "|".join(map(re.escape, ALLOWED_REPOSITORIES)) + ")"
 REPIN_COMMAND: Final = ("python", "/opt/repin/repin_npm_archive.py")
 SHA_LENGTH: Final = 40
 PYTHON_ARTIFACT_COUNT: Final = 2
@@ -64,7 +66,7 @@ BRANCH_REF: Final = r"refs/heads/[A-Za-z0-9._/-]+"
 PROVENANCE_CONTEXT: Final[dict[str, re.Pattern[str]]] = {
     "GITHUB_EVENT_NAME": re.compile(r"workflow_run"),
     "GITHUB_REF": re.compile(BRANCH_REF),
-    "GITHUB_REPOSITORY": re.compile(re.escape(REPOSITORY)),
+    "GITHUB_REPOSITORY": re.compile(ALLOWED_PATTERN),
     "GITHUB_REPOSITORY_ID": DIGITS,
     "GITHUB_REPOSITORY_OWNER_ID": DIGITS,
     "GITHUB_RUN_ATTEMPT": DIGITS,
@@ -74,7 +76,7 @@ PROVENANCE_CONTEXT: Final[dict[str, re.Pattern[str]]] = {
     "GITHUB_WORKFLOW": re.compile(r"[ -~]+"),
     # npm trusted publishing is bound to this exact workflow file.
     "GITHUB_WORKFLOW_REF": re.compile(
-        re.escape(f"{REPOSITORY}/.github/workflows/publish.yml@") + BRANCH_REF
+        ALLOWED_PATTERN + re.escape("/.github/workflows/publish.yml@") + BRANCH_REF
     ),
     "RUNNER_ENVIRONMENT": re.compile(r"github-hosted"),
 }
@@ -95,6 +97,13 @@ class FoundationClient(Protocol):
     def guard(
         self, source: dagger.Directory, repository: str, commit_sha: str
     ) -> dagger.Container: ...
+
+
+def allowed_repository(repository: str) -> str:
+    """Return the run's repository only when it is exactly one of the two allowed names."""
+    if repository not in ALLOWED_REPOSITORIES:
+        raise ValueError(f"repository {repository!r} is not hseshadr/assay or gainratio/assay")
+    return repository
 
 
 def _foundation() -> FoundationClient:
@@ -118,12 +127,14 @@ class Assay:
     """Run the same typed Assay graph locally and on GitHub."""
 
     source: dagger.Directory = field()
+    repository: str = field(default=DEFAULT_REPOSITORY)
 
     @classmethod
-    def create(cls, workspace: dagger.Workspace) -> Self:
-        """Construct the graph from one explicit typed workspace snapshot."""
+    def create(cls, workspace: dagger.Workspace, repository: str = DEFAULT_REPOSITORY) -> Self:
+        """Construct the graph from one typed workspace snapshot and the run's repository."""
         instance = cls.__new__(cls)
         instance.source = workspace.directory("/", exclude=SOURCE_EXCLUDES)
+        instance.repository = allowed_repository(repository)
         return instance
 
     @function
@@ -188,9 +199,11 @@ class Assay:
         return await self._repin_api(github_token, "comment", pr_number, "--kind", kind)
 
     async def _repin_api(self, token: dagger.Secret, verb: str, pr: int, *rest: str) -> str:
-        command = [*REPIN_COMMAND, verb, "--repository", REPOSITORY, "--pr", str(pr), *rest]
         tool = self._repin_tool().with_secret_variable("GH_TOKEN", token)
-        return await tool.with_exec(command).stdout()
+        return await tool.with_exec(self._repin_command(verb, pr, *rest)).stdout()
+
+    def _repin_command(self, verb: str, pr: int, *rest: str) -> list[str]:
+        return [*REPIN_COMMAND, verb, "--repository", self.repository, "--pr", str(pr), *rest]
 
     def _release_npm(self, source: dagger.Directory) -> dagger.Directory:
         complete = self._source_with_history(source)
@@ -253,6 +266,10 @@ class Assay:
         if not isinstance(parsed, dict) or set(parsed) != set(PROVENANCE_CONTEXT):
             raise ValueError("provenance context must carry exactly the npm provenance variables")
         values = {name: Assay._context_value(name, parsed[name]) for name in parsed}
+        if not values["GITHUB_WORKFLOW_REF"].startswith(values["GITHUB_REPOSITORY"] + "/"):
+            raise ValueError(
+                "provenance context GITHUB_WORKFLOW_REF is not this repository's publisher"
+            )
         return {"CI": "true", "GITHUB_ACTIONS": "true", **values}
 
     @staticmethod
@@ -288,17 +305,16 @@ class Assay:
         await self._shared_guard(complete, commit_sha).sync()
         return self._source_with_history(complete, commit_sha)
 
-    @staticmethod
-    def _canonical_source(source: dagger.Directory, commit_sha: str) -> dagger.Directory:
+    def _canonical_source(self, source: dagger.Directory, commit_sha: str) -> dagger.Directory:
         return _foundation().source(
             source=source,
-            repository=REPOSITORY,
+            repository=self.repository,
             commit_sha=commit_sha,
         )
 
-    @staticmethod
-    def _shared_guard(source: dagger.Directory, commit_sha: str) -> dagger.Container:
-        return _foundation().guard(source=source, repository=REPOSITORY, commit_sha=commit_sha)
+    def _shared_guard(self, source: dagger.Directory, commit_sha: str) -> dagger.Container:
+        repository = self.repository
+        return _foundation().guard(source=source, repository=repository, commit_sha=commit_sha)
 
     def _shellcheck(self, source: dagger.Directory) -> dagger.Container:
         command = "shellcheck examples/*.sh scripts/*.sh"
@@ -312,21 +328,15 @@ class Assay:
         return git_metadata.with_directory("/", source)
 
     def _hosted(self, tag: str, commit_sha: str, github_token: dagger.Secret) -> dagger.Container:
-        command = [
-            "uv",
-            "run",
-            "python",
-            "scripts/verify_release_identity.py",
-            "github",
-            REPOSITORY,
-            tag,
-            commit_sha,
-        ]
         return (
             self._repository(self.source)
             .with_secret_variable("GITHUB_TOKEN", github_token)
-            .with_exec(command)
+            .with_exec(self._hosted_command(tag, commit_sha))
         )
+
+    def _hosted_command(self, tag: str, commit_sha: str) -> list[str]:
+        script = "scripts/verify_release_identity.py"
+        return ["uv", "run", "python", script, "github", self.repository, tag, commit_sha]
 
     def _identity(self, source: dagger.Directory, tag: str, commit_sha: str) -> dagger.Container:
         # A dag.git commit tree has no refs/remotes/origin/main. Derive it from an
@@ -598,16 +608,17 @@ class Assay:
             .with_exec(["sh", "-ceu", install])
         )
 
-    @staticmethod
-    def _history(commit_sha: str) -> dagger.Directory:
+    def _history(self, commit_sha: str) -> dagger.Directory:
         if commit_sha:
-            Assay._require_sha(commit_sha)
-            return Assay._release_source(commit_sha)
-        return dag.git(REPOSITORY_URL).branch("main").tree(depth=0, include_tags=True)
+            self._require_sha(commit_sha)
+            return self._release_source(commit_sha)
+        return self._git().branch("main").tree(depth=0, include_tags=True)
 
-    @staticmethod
-    def _release_source(commit_sha: str) -> dagger.Directory:
-        return dag.git(REPOSITORY_URL).commit(commit_sha).tree(depth=0, include_tags=True)
+    def _release_source(self, commit_sha: str) -> dagger.Directory:
+        return self._git().commit(commit_sha).tree(depth=0, include_tags=True)
+
+    def _git(self) -> dagger.GitRepository:
+        return dag.git(f"https://github.com/{self.repository}.git")
 
     @staticmethod
     def _require_sha(commit_sha: str) -> None:

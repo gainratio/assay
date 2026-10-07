@@ -24,4 +24,4 @@ jobs:
         with:
           version: "0.21.8"
           verb: call
-          args: security --commit-sha=${{ github.sha }}
+          args: --repository="$GITHUB_REPOSITORY" security --commit-sha=${{ github.sha }}

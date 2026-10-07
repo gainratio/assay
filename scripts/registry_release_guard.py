@@ -26,11 +26,13 @@ _PYTHON_FILE_COUNT = 2
 _NOT_FOUND = 404
 _CORE = r"(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)"
 _NPM_VERSION = re.compile(rf"^{_CORE}(?:-dev\.(0|[1-9]\d*))?$")
-_REPOSITORY = "https://github.com/hseshadr/assay"
+# Exactly the two names this repository publishes from (hseshadr -> gainratio org move).
+# Registry provenance names the publishing repository; releases from either owner verify.
+_PYPI_REPOSITORIES = ("hseshadr/assay", "gainratio/assay")
+_REPOSITORIES = tuple(f"https://github.com/{name}" for name in _PYPI_REPOSITORIES)
 # npm makes a package's first version `latest` whatever `--tag` says, so a freshly claimed
 # name has this trusted-publishing stub on `latest`. It is no release on any channel.
 BOOTSTRAP_VERSION = "0.0.0-bootstrap.0"
-_PYPI_REPOSITORY = "hseshadr/assay"
 _WORKFLOW = ".github/workflows/publish.yml"
 _PUBLISH_REF = "refs/heads/main"
 _FETCH_ATTEMPTS = 3
@@ -162,9 +164,9 @@ def _subject_matches(
 def _pypi_bundle_valid(bundle: object, filename: str, digest: str) -> bool:
     metadata = _mapping(bundle)
     publisher = _mapping(metadata.get("publisher"))
-    expected = ("GitHub", _PYPI_REPOSITORY, Path(_WORKFLOW).name)
-    actual = (publisher.get("kind"), publisher.get("repository"), publisher.get("workflow"))
-    if actual != expected:
+    expected = ("GitHub", Path(_WORKFLOW).name)
+    actual = (publisher.get("kind"), publisher.get("workflow"))
+    if actual != expected or publisher.get("repository") not in _PYPI_REPOSITORIES:
         return False
     attestations = _sequence(metadata.get("attestations"))
     return any(_pypi_attestation_valid(item, filename, digest) for item in attestations)
@@ -203,15 +205,21 @@ def _workflow_matches(statement: dict[str, object]) -> bool:
     external = _mapping(definition.get("externalParameters"))
     workflow = _mapping(external.get("workflow"))
     return (
-        workflow.get("repository") == _REPOSITORY
+        workflow.get("repository") in _REPOSITORIES
         and workflow.get("path") == _WORKFLOW
         and workflow.get("ref") == _PUBLISH_REF
     )
 
 
-def _dependency_matches(value: object, identity: ProvenanceIdentity) -> bool:
+def _workflow_repository(statement: dict[str, object]) -> object:
+    definition = _mapping(_mapping(statement.get("predicate")).get("buildDefinition"))
+    workflow = _mapping(_mapping(definition.get("externalParameters")).get("workflow"))
+    return workflow.get("repository")
+
+
+def _dependency_matches(value: object, identity: ProvenanceIdentity, repository: object) -> bool:
     dependency = _mapping(value)
-    expected_uri = f"git+{_REPOSITORY}@{_PUBLISH_REF}"
+    expected_uri = f"git+{repository}@{_PUBLISH_REF}"
     return dependency.get("uri") == expected_uri and _mapping(dependency.get("digest")) == {
         "gitCommit": identity.sha
     }
@@ -239,7 +247,8 @@ def _resolved_dependency_matches(
 ) -> bool:
     definition = _mapping(_mapping(statement.get("predicate")).get("buildDefinition"))
     dependencies = _sequence(definition.get("resolvedDependencies"))
-    return any(_dependency_matches(item, identity) for item in dependencies)
+    repository = _workflow_repository(statement)
+    return any(_dependency_matches(item, identity, repository) for item in dependencies)
 
 
 def _statement_matches(statement: dict[str, object], identity: ProvenanceIdentity) -> bool:
