@@ -24,7 +24,7 @@ import assay_dagger.main as dagger_module  # noqa: E402
 from assay_dagger.main import Assay  # noqa: E402
 from scripts.release_epoch import source_date_epoch  # noqa: E402
 
-FOUNDATION_SHA = "6075c0c4e0feb7bbdde4bcb9ee2f0b31304251e9"
+FOUNDATION_SHA = "a88866232e679b6353d2b75bceb01969be739f67"
 REPOSITORY = "hseshadr/assay"
 #: The org this repository moves to. Both owners are accepted, exactly; nothing else is.
 ORG_REPOSITORY = "gainratio/assay"
