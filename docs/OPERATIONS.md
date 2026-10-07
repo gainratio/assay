@@ -126,9 +126,9 @@ skip safely; any mismatch fails closed.
 Local developer checks remain available without release authority:
 
 ```bash
-dagger call ci --commit-sha="$(git rev-parse HEAD)"
-dagger call security --commit-sha="$(git rev-parse HEAD)"
-dagger call artifacts export --path=dist/release
+dagger call --repository=gainratio/assay ci --commit-sha="$(git rev-parse HEAD)"
+dagger call --repository=gainratio/assay security --commit-sha="$(git rev-parse HEAD)"
+dagger call --repository=gainratio/assay artifacts export --path=dist/release
 ```
 
 The root [README](../README.md) is embedded in each release artifact. Registry writes are irreversible;

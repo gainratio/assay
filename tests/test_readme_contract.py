@@ -13,7 +13,7 @@ import pytest
 
 _ROOT = Path(__file__).resolve().parents[1]
 _README = _ROOT / "README.md"
-_REPO = "https://github.com/hseshadr/assay/blob/main/"
+_REPO = "https://github.com/gainratio/assay/blob/main/"
 _TRY = "## Try it"
 _SECTIONS = (
     "## Try it",

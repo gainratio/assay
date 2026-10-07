@@ -275,7 +275,7 @@ def _npm_attestation(
     sha: str,
     subject_sha512: str,
     workflow_ref: str = "refs/heads/main",
-    repository: str = "hseshadr/assay",
+    repository: str = "gainratio/assay",
     source_repository: str = "",
 ) -> dict[str, object]:
     source = source_repository or repository
@@ -311,7 +311,7 @@ def _npm_attestation(
 
 
 def _pypi_attestation(
-    *, filename: str, sha256: str, repository: str = "hseshadr/assay"
+    *, filename: str, sha256: str, repository: str = "gainratio/assay"
 ) -> dict[str, object]:
     statement = {
         "_type": "https://in-toto.io/Statement/v1",

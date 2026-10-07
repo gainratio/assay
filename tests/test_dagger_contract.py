@@ -25,10 +25,11 @@ from assay_dagger.main import Assay  # noqa: E402
 from scripts.release_epoch import source_date_epoch  # noqa: E402
 
 FOUNDATION_SHA = "a88866232e679b6353d2b75bceb01969be739f67"
-REPOSITORY = "hseshadr/assay"
-#: The org this repository moves to. Both owners are accepted, exactly; nothing else is.
-ORG_REPOSITORY = "gainratio/assay"
-OWNERS = (REPOSITORY, ORG_REPOSITORY)
+#: The repository's home since the gainratio org move.
+REPOSITORY = "gainratio/assay"
+#: The pre-move owner, still accepted until the move finishes; nothing else is.
+LEGACY_REPOSITORY = "hseshadr/assay"
+OWNERS = (LEGACY_REPOSITORY, REPOSITORY)
 FOREIGN_REPOSITORIES = (
     "attacker/assay",
     "gainratio/aml-filter",
@@ -300,7 +301,7 @@ def test_should_construct_from_one_explicit_typed_workspace() -> None:
     workspace = RecordingWorkspace()
 
     # When
-    Assay.create(cast(dagger.Workspace, workspace))
+    Assay.create(cast(dagger.Workspace, workspace), repository=REPOSITORY)
 
     # Then
     assert workspace.path == "/"
@@ -311,12 +312,16 @@ def test_should_construct_from_one_explicit_typed_workspace() -> None:
     assert signature.parameters["workspace"].annotation is dagger.Workspace
 
 
-def test_should_default_to_todays_repository_when_the_caller_names_none() -> None:
-    # Given / When
-    assay = Assay.create(cast(dagger.Workspace, RecordingWorkspace()))
+def test_should_require_the_run_repository_with_no_owner_to_fall_back_on() -> None:
+    # Given
+    signature = inspect.signature(Assay.create, eval_str=True)
 
-    # Then: no behavior change for existing callers (local `dagger call`, `dagger check`)
-    assert assay.repository == "hseshadr/assay"
+    # When
+    repository = signature.parameters["repository"]
+
+    # Then: a caller that drops --repository fails instead of gating as a stale owner
+    assert repository.default is inspect.Parameter.empty
+    assert not hasattr(dagger_module, "DEFAULT_REPOSITORY")
 
 
 @pytest.mark.parametrize("repository", OWNERS)
@@ -413,7 +418,7 @@ def test_should_propagate_a_foundation_rejection_without_fallback(
     foundation.reject_guard = True
     monkeypatch.setattr(dagger_module, "_foundation", lambda: foundation, raising=False)
 
-    assay = Assay.create(cast(dagger.Workspace, RecordingWorkspace()))
+    assay = Assay.create(cast(dagger.Workspace, RecordingWorkspace()), repository=REPOSITORY)
 
     # When / Then
     with pytest.raises(FoundationRejectedError, match="shared guard rejected the source"):

@@ -5,6 +5,7 @@ from __future__ import annotations
 import ast
 import importlib
 import inspect
+import json
 import re
 import runpy
 import sys
@@ -253,3 +254,16 @@ def test_should_document_the_portable_binary64_contract() -> None:
     # Then
     assert "finite IEEE-754 binary64" in source
     assert "safe integer" not in source
+
+
+def test_should_name_gainratio_as_home_in_both_package_manifests() -> None:
+    # Given
+    home = "https://github.com/gainratio/assay"
+    urls = _table(_load_pyproject(), "project", "urls")
+    package = json.loads((ROOT / "ts" / "package.json").read_text(encoding="utf-8"))
+
+    # When / Then: npm provenance needs repository.url to match the publishing repository
+    assert urls == {"Homepage": home, "Repository": home, "Issues": f"{home}/issues"}
+    assert package["repository"]["url"] == f"git+{home}.git"
+    assert package["homepage"] == f"{home}#readme"
+    assert package["bugs"] == {"url": f"{home}/issues"}

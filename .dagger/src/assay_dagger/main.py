@@ -29,8 +29,8 @@ NPM_PUBLISHER_SHA512: Final = (
     "9d31cd8e92c3b70956bd2ecc72833a57b4b3098f5bfa7943"
 )
 PNPM_VERSION: Final = "11.5.0"
-DEFAULT_REPOSITORY: Final = "hseshadr/assay"
 # The run's repository must be exactly one of these two (hseshadr -> gainratio org move).
+# There is deliberately no default: every caller passes --repository="$GITHUB_REPOSITORY".
 ALLOWED_REPOSITORIES: Final = ("hseshadr/assay", "gainratio/assay")
 ALLOWED_PATTERN: Final = "(?:" + "|".join(map(re.escape, ALLOWED_REPOSITORIES)) + ")"
 REPIN_COMMAND: Final = ("python", "/opt/repin/repin_npm_archive.py")
@@ -127,10 +127,10 @@ class Assay:
     """Run the same typed Assay graph locally and on GitHub."""
 
     source: dagger.Directory = field()
-    repository: str = field(default=DEFAULT_REPOSITORY)
+    repository: str = field()
 
     @classmethod
-    def create(cls, workspace: dagger.Workspace, repository: str = DEFAULT_REPOSITORY) -> Self:
+    def create(cls, workspace: dagger.Workspace, repository: str) -> Self:
         """Construct the graph from one typed workspace snapshot and the run's repository."""
         instance = cls.__new__(cls)
         instance.source = workspace.directory("/", exclude=SOURCE_EXCLUDES)

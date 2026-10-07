@@ -11,7 +11,7 @@ Security fixes continue on `main` and may require a newer development release.
 
 ## Report a vulnerability
 
-Use GitHub's private security-advisory flow for `hseshadr/assay`. Include the affected interface,
+Use GitHub's private security-advisory flow for `gainratio/assay`. Include the affected interface,
 the smallest safe reproduction, expected behavior, observed behavior, and likely impact. If the
 private advisory flow is unavailable, contact `harish.seshadri@gmail.com` without attaching secrets
 or personal data. You can expect an acknowledgement within seven days.

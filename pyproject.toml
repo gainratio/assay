@@ -58,9 +58,9 @@ dev = [
 assay = "assay.cli:main"
 
 [project.urls]
-Homepage = "https://github.com/hseshadr/assay"
-Repository = "https://github.com/hseshadr/assay"
-Issues = "https://github.com/hseshadr/assay/issues"
+Homepage = "https://github.com/gainratio/assay"
+Repository = "https://github.com/gainratio/assay"
+Issues = "https://github.com/gainratio/assay/issues"
 
 # Hatchling and ``assay.__version__`` read the same source.
 [tool.hatch.version]

@@ -47,8 +47,8 @@ jobs:
         with:
           version: "0.21.8"
           verb: call
-          module: github.com/hseshadr/assay@${{ github.event.workflow_run.head_sha }}
-          args: pypi-required --candidate=candidate --expected-sha="$HEAD_SHA"
+          module: github.com/gainratio/assay@${{ github.event.workflow_run.head_sha }}
+          args: --repository="$GITHUB_REPOSITORY" pypi-required --candidate=candidate --expected-sha="$HEAD_SHA"
       - if: steps.plan.outputs.output == 'true'
         uses: pypa/gh-action-pypi-publish@dc37677b2e1c63e2034f94d8a5b11f265b73ba33 # v1.14.2
         with:
@@ -95,5 +95,5 @@ jobs:
         with:
           version: "0.21.8"
           verb: call
-          module: github.com/hseshadr/assay@${{ github.event.workflow_run.head_sha }}
-          args: publish-npm --candidate=candidate --expected-sha="$HEAD_SHA" --oidc-url=env:ACTIONS_ID_TOKEN_REQUEST_URL --oidc-token=env:ACTIONS_ID_TOKEN_REQUEST_TOKEN --github-context=github-context.json
+          module: github.com/gainratio/assay@${{ github.event.workflow_run.head_sha }}
+          args: --repository="$GITHUB_REPOSITORY" publish-npm --candidate=candidate --expected-sha="$HEAD_SHA" --oidc-url=env:ACTIONS_ID_TOKEN_REQUEST_URL --oidc-token=env:ACTIONS_ID_TOKEN_REQUEST_TOKEN --github-context=github-context.json
