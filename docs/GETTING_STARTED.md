@@ -34,7 +34,7 @@ Local traps we hit:
 ## 2. Clone and install
 
 ```bash
-git clone https://github.com/hseshadr/assay
+git clone https://github.com/gainratio/assay
 cd assay
 NODE22=$(npx --yes --package=node@22.13.0 -c 'command -v node')
 COREPACK=$(npx --yes --package=corepack@0.34.0 -c 'command -v corepack')
@@ -69,7 +69,7 @@ Timing on a MacBook from a fresh clone: the Python check took about 8.5 minutes 
 and the TypeScript check about 40 seconds.
 
 CI runs the same checks, plus mutation tests, dependency audits, workflow checks, and
-secret scans, inside [Dagger](https://dagger.io) with `dagger call ci`. You can also run
+secret scans, inside [Dagger](https://dagger.io) with `dagger call --repository=gainratio/assay ci`. You can also run
 the mutation tests locally with `uv run poe mutants`; each one breaks a guard on purpose
 and requires a test to fail.
 

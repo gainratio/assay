@@ -168,14 +168,14 @@ def test_should_refuse_a_primary_site_without_a_pin(tmp_path: Path) -> None:
 def test_should_build_a_head_bound_signed_commit_request(tmp_path: Path) -> None:
     root = _repository(tmp_path, NEW)
 
-    request = commit_request(root, "hseshadr/assay", "dependabot/x", "f" * 40, PIN_SITES)
+    request = commit_request(root, "gainratio/assay", "dependabot/x", "f" * 40, PIN_SITES)
 
     variables = request["variables"]
     assert isinstance(variables, dict)
     payload = variables["input"]
     assert payload["expectedHeadOid"] == "f" * 40
     assert payload["branch"] == {
-        "repositoryNameWithOwner": "hseshadr/assay",
+        "repositoryNameWithOwner": "gainratio/assay",
         "branchName": "dependabot/x",
     }
     additions = payload["fileChanges"]["additions"]
@@ -187,7 +187,7 @@ def test_should_build_a_head_bound_signed_commit_request(tmp_path: Path) -> None
 
 def test_should_refuse_a_head_that_is_not_a_full_commit_sha(tmp_path: Path) -> None:
     with pytest.raises(RepinError, match="commit sha"):
-        commit_request(_repository(tmp_path), "hseshadr/assay", "b", "main", PIN_SITES)
+        commit_request(_repository(tmp_path), "gainratio/assay", "b", "main", PIN_SITES)
 
 
 def test_should_print_the_verdict_as_step_outputs(
@@ -218,7 +218,7 @@ def test_should_emit_the_commit_request_as_json_from_the_cli(
     tmp_path: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:
     root = _repository(tmp_path)
-    arguments = ["commit-request", "--root", str(root), "--repository", "hseshadr/assay"]
+    arguments = ["commit-request", "--root", str(root), "--repository", "gainratio/assay"]
 
     assert main([*arguments, "--branch", "b", "--head-sha", "e" * 40, *map(str, PIN_SITES)]) == 0
 
@@ -268,7 +268,7 @@ def test_should_refuse_an_unknown_explanation() -> None:
 import scripts.repin_npm_archive as tool  # noqa: E402
 
 HEAD = "e" * 40
-REPOSITORY = "hseshadr/assay"
+REPOSITORY = "gainratio/assay"
 
 
 class FakeGitHub:
@@ -350,7 +350,7 @@ def test_should_write_nothing_when_the_head_already_pins_the_digest(tmp_path: Pa
     ("pull", "reason"),
     [
         (_pull(login="octocat"), "not opened by dependabot"),
-        (_pull(repo="fork/assay"), "not in hseshadr/assay"),
+        (_pull(repo="fork/assay"), "not in gainratio/assay"),
         (_pull(ref="dependabot/uv/x"), "not a Dependabot npm branch"),
         (_pull(ref=7), "malformed"),
     ],

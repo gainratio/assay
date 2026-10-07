@@ -4,9 +4,9 @@ A Python and TypeScript library that combines several measurements into one scor
 
 **Try it: `pip install assay-engine`** (Python 3.13 or newer), then run the example below.
 
-[![CI](https://github.com/hseshadr/assay/actions/workflows/dagger.yml/badge.svg)](https://github.com/hseshadr/assay/actions/workflows/dagger.yml)
-[![License](https://img.shields.io/github/license/hseshadr/assay)](https://github.com/hseshadr/assay/blob/main/LICENSE)
-[![Version](https://img.shields.io/github/v/tag/hseshadr/assay?include_prereleases&sort=semver&label=version)](https://github.com/hseshadr/assay/blob/main/CHANGELOG.md)
+[![CI](https://github.com/gainratio/assay/actions/workflows/dagger.yml/badge.svg)](https://github.com/gainratio/assay/actions/workflows/dagger.yml)
+[![License](https://img.shields.io/github/license/gainratio/assay)](https://github.com/gainratio/assay/blob/main/LICENSE)
+[![Version](https://img.shields.io/github/v/tag/gainratio/assay?include_prereleases&sort=semver&label=version)](https://github.com/gainratio/assay/blob/main/CHANGELOG.md)
 
 Lots of apps rank or grade things: laptops, vendors, job applicants, software releases.
 The score usually comes from a few lines of arithmetic that mix different units (hours,
@@ -20,7 +20,7 @@ step of the math: each measurement's place on its scale, its share, and what it 
 The Python and TypeScript packages give the same numbers for the same input. It is a
 plain calculation library. It makes no network calls and keeps nothing.
 
-**Technical docs:** [Architecture](https://github.com/hseshadr/assay/blob/main/docs/ARCHITECTURE.md) · [Getting started for developers](https://github.com/hseshadr/assay/blob/main/docs/GETTING_STARTED.md) · [Methods and result fields](https://github.com/hseshadr/assay/blob/main/docs/METHODS.md) · [Operations and limits](https://github.com/hseshadr/assay/blob/main/docs/OPERATIONS.md)
+**Technical docs:** [Architecture](https://github.com/gainratio/assay/blob/main/docs/ARCHITECTURE.md) · [Getting started for developers](https://github.com/gainratio/assay/blob/main/docs/GETTING_STARTED.md) · [Methods and result fields](https://github.com/gainratio/assay/blob/main/docs/METHODS.md) · [Operations and limits](https://github.com/gainratio/assay/blob/main/docs/OPERATIONS.md)
 
 ## Try it
 
@@ -101,8 +101,8 @@ score: 0.66 out of 1
 sha256:e73545373ecea6c81c9e21d70965e29c13a777378cc3e2ad1e917e399766f2c5
 ```
 
-More examples are in [`examples/`](https://github.com/hseshadr/assay/tree/main/examples)
-and the [quickstart](https://github.com/hseshadr/assay/blob/main/QUICKSTART.md).
+More examples are in [`examples/`](https://github.com/gainratio/assay/tree/main/examples)
+and the [quickstart](https://github.com/gainratio/assay/blob/main/QUICKSTART.md).
 
 ## How it works
 
@@ -170,11 +170,11 @@ use `parse_request()` and `compose()` from the package root.
 
 You need Python 3.13 with [uv](https://docs.astral.sh/uv/), and Node 22.13.0 with pnpm
 11.5.0 for the TypeScript package. The
-[getting started guide](https://github.com/hseshadr/assay/blob/main/docs/GETTING_STARTED.md)
+[getting started guide](https://github.com/gainratio/assay/blob/main/docs/GETTING_STARTED.md)
 walks through setup, the code layout, and a first change.
 
 ```bash
-git clone https://github.com/hseshadr/assay
+git clone https://github.com/gainratio/assay
 cd assay
 uv sync --all-extras
 uv run poe gate
@@ -190,17 +190,17 @@ bash examples/run_composite.sh
 
 ## More detail
 
-- [Getting started for developers](https://github.com/hseshadr/assay/blob/main/docs/GETTING_STARTED.md): setup, code map, first change, and pull requests.
-- [Architecture](https://github.com/hseshadr/assay/blob/main/docs/ARCHITECTURE.md): the two packages, how a request flows, what the checks cover, and a worked cross-language example.
-- [Explore the interactive architecture map](https://github.com/hseshadr/assay/blob/main/docs/architecture/index.html).
-- [Methods](https://github.com/hseshadr/assay/blob/main/docs/METHODS.md): the exact math for each method, uncertainty ranges, and every result field.
-- [Operations](https://github.com/hseshadr/assay/blob/main/docs/OPERATIONS.md): files the command line reads and writes, size limits, calculator settings, and the release process.
-- [Quickstart](https://github.com/hseshadr/assay/blob/main/QUICKSTART.md): the command line and building both packages from a checkout.
-- [TypeScript package](https://github.com/hseshadr/assay/blob/main/ts/README.md): the npm package on its own.
-- [CHANGELOG](https://github.com/hseshadr/assay/blob/main/CHANGELOG.md): what changed in each version.
-- [SECURITY.md](https://github.com/hseshadr/assay/blob/main/SECURITY.md): how to report a vulnerability privately.
-- Bugs and feature requests: [GitHub Issues](https://github.com/hseshadr/assay/issues).
+- [Getting started for developers](https://github.com/gainratio/assay/blob/main/docs/GETTING_STARTED.md): setup, code map, first change, and pull requests.
+- [Architecture](https://github.com/gainratio/assay/blob/main/docs/ARCHITECTURE.md): the two packages, how a request flows, what the checks cover, and a worked cross-language example.
+- [Explore the interactive architecture map](https://github.com/gainratio/assay/blob/main/docs/architecture/index.html).
+- [Methods](https://github.com/gainratio/assay/blob/main/docs/METHODS.md): the exact math for each method, uncertainty ranges, and every result field.
+- [Operations](https://github.com/gainratio/assay/blob/main/docs/OPERATIONS.md): files the command line reads and writes, size limits, calculator settings, and the release process.
+- [Quickstart](https://github.com/gainratio/assay/blob/main/QUICKSTART.md): the command line and building both packages from a checkout.
+- [TypeScript package](https://github.com/gainratio/assay/blob/main/ts/README.md): the npm package on its own.
+- [CHANGELOG](https://github.com/gainratio/assay/blob/main/CHANGELOG.md): what changed in each version.
+- [SECURITY.md](https://github.com/gainratio/assay/blob/main/SECURITY.md): how to report a vulnerability privately.
+- Bugs and feature requests: [GitHub Issues](https://github.com/gainratio/assay/issues).
 
 ## License
 
-MIT. See [LICENSE](https://github.com/hseshadr/assay/blob/main/LICENSE).
+MIT. See [LICENSE](https://github.com/gainratio/assay/blob/main/LICENSE).

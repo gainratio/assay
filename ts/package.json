@@ -16,9 +16,13 @@
   ],
   "license": "MIT",
   "author": "Harish Seshadri",
+  "homepage": "https://github.com/gainratio/assay#readme",
+  "bugs": {
+    "url": "https://github.com/gainratio/assay/issues"
+  },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/hseshadr/assay.git",
+    "url": "git+https://github.com/gainratio/assay.git",
     "directory": "ts"
   },
   "packageManager": "pnpm@11.5.0",

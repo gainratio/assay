@@ -66,7 +66,7 @@ console.log(result.score); // 0.8
 `parseRequest()` accepts `unknown`, rejects extra fields and invalid values, and returns
 the closed `ScoreRequest` union. `compose()` dispatches only `weighted_mean`, `additive`,
 or `minimum`. See the repository's
-[method reference](https://github.com/hseshadr/assay/blob/main/docs/METHODS.md) for every
+[method reference](https://github.com/gainratio/assay/blob/main/docs/METHODS.md) for every
 request rule and result field.
 
 ## Parity boundary

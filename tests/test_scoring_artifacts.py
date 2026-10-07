@@ -36,10 +36,10 @@ _LEGACY_KEY_PHRASES = (
     "signing key",
 )
 _ARTIFACT_SAFE_LINKS = (
-    "https://github.com/hseshadr/assay/blob/main/QUICKSTART.md",
-    "https://github.com/hseshadr/assay/blob/main/docs/ARCHITECTURE.md",
-    "https://github.com/hseshadr/assay/blob/main/docs/METHODS.md",
-    "https://github.com/hseshadr/assay/blob/main/docs/OPERATIONS.md",
+    "https://github.com/gainratio/assay/blob/main/QUICKSTART.md",
+    "https://github.com/gainratio/assay/blob/main/docs/ARCHITECTURE.md",
+    "https://github.com/gainratio/assay/blob/main/docs/METHODS.md",
+    "https://github.com/gainratio/assay/blob/main/docs/OPERATIONS.md",
 )
 _MIGRATION_BOUNDARY_FILES = frozenset(
     {

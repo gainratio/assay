@@ -177,7 +177,7 @@ def _expand_action_args(args: str, tag: str, cwd: Path) -> list[str]:
     """Expand args exactly as dagger-for-github's final bash step does, but print them."""
     bash = shutil.which("bash")
     assert bash is not None
-    env = {"TAG": tag, "GITHUB_SHA": "a" * 40, "GITHUB_REPOSITORY": "hseshadr/assay"}
+    env = {"TAG": tag, "GITHUB_SHA": "a" * 40, "GITHUB_REPOSITORY": "gainratio/assay"}
     env["PATH"] = "/usr/bin:/bin"
     result = subprocess.run(  # noqa: S603 - fixed bash, test-owned argv
         [bash, "-c", f"printf '%s\\0' {args}"], env=env, cwd=cwd, capture_output=True, check=True
@@ -207,7 +207,7 @@ def test_should_pass_any_dispatched_tag_to_dagger_as_one_inert_argument(
 
     # Then the tag is one literal argument and bash ran nothing
     assert argv == [
-        "--repository=hseshadr/assay",
+        "--repository=gainratio/assay",
         "release-candidate",
         f"--tag={tag}",
         "--commit-sha=" + "a" * 40,
@@ -290,8 +290,9 @@ def test_should_bind_download_and_remote_dagger_to_the_candidate_run_identity() 
         }
         dagger_step = _publisher_dagger(job)
         assert _with(dagger_step)["module"] == (
-            "github.com/hseshadr/assay@${{ github.event.workflow_run.head_sha }}"
+            "github.com/gainratio/assay@${{ github.event.workflow_run.head_sha }}"
         )
+        assert str(_with(dagger_step)["args"]).count('--repository="$GITHUB_REPOSITORY" ') == 1
 
 
 #: The central lineage proof (hseshadr/ci#49), pinned at a literal hseshadr/ci commit.
