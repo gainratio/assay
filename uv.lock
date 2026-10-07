@@ -85,7 +85,7 @@ provides-extras = ["cli", "metrics"]
 
 [package.metadata.requires-dev]
 dev = [
-    { name = "dagger-io", specifier = "==0.21.9" },
+    { name = "dagger-io", specifier = "==0.21.10" },
     { name = "hatchling", specifier = "==1.32.4" },
     { name = "mypy", specifier = ">=2.3.1" },
     { name = "pip-audit", specifier = "==2.10.1" },
@@ -367,7 +367,7 @@ wheels = [
 
 [[package]]
 name = "dagger-io"
-version = "0.21.9"
+version = "0.21.10"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "anyio" },
@@ -384,9 +384,9 @@ dependencies = [
     { name = "typing-extensions" },
     { name = "yarl" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/8e/9e/d689cc31e72b090d567517137114cdaf2e2c4bf39da5837834f5af89f147/dagger_io-0.21.9.tar.gz", hash = "sha256:42fb15d4db5bf2ecb305140f7cc80d931448204afa03ad5ef033568e3fe6e9bb", size = 124385, upload-time = "2026-08-26T13:47:28.224Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/d4/39/9b8abdc99d1369b693d79d9ecb786443062c3557ad6503f4ad7a58e93080/dagger_io-0.21.10.tar.gz", hash = "sha256:807ee9090150848989dc1b9eeaab475d9b2c0e8b696ad60adf441217b43310ef", size = 124364, upload-time = "2026-09-30T16:28:13.902Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/0a/7b/586603482b61478dac61706615a78fb4264ea6402f4644ce4d6c4646eafe/dagger_io-0.21.9-py3-none-any.whl", hash = "sha256:977e00fad736b8b7cd44cf97977091f5f36bc358f8082b1cf45bfbc5c57cfff7", size = 112560, upload-time = "2026-08-26T13:47:27.059Z" },
+    { url = "https://files.pythonhosted.org/packages/dc/8b/3002a279c256f07a94ea9a3926a977b85dc1e49faa7f4fceb4e30df3cff3/dagger_io-0.21.10-py3-none-any.whl", hash = "sha256:0d37066140890e5b93494224e1b38b9214d7b61f1e668f145164f954c0601e8f", size = 112569, upload-time = "2026-09-30T16:28:12.573Z" },
 ]
 
 [[package]]
