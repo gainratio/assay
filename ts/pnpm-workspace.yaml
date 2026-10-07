@@ -1,9 +1,11 @@
 packages: []
 
 # Vitest's Vite/PostCSS toolchain otherwise resolves a nanoid release affected by
-# GHSA-2v37-7h3g-55p8. This is test tooling only; the packed runtime has no deps.
+# GHSA-2v37-7h3g-55p8, and a source-map-js release affected by GHSA-68fv-2mgg-jv7q.
+# This is test tooling only; the packed runtime has no deps.
 overrides:
   nanoid: 3.3.18
+  source-map-js: 1.2.2
 
 # Quarantine, in minutes: a version must have been on npm for a full day before this
 # repo will resolve it. It is the cheapest defence there is against a compromised
