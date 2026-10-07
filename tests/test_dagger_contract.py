@@ -26,6 +26,16 @@ from scripts.release_epoch import source_date_epoch  # noqa: E402
 
 FOUNDATION_SHA = "6075c0c4e0feb7bbdde4bcb9ee2f0b31304251e9"
 REPOSITORY = "hseshadr/assay"
+#: The org this repository moves to. Both owners are accepted, exactly; nothing else is.
+ORG_REPOSITORY = "gainratio/assay"
+OWNERS = (REPOSITORY, ORG_REPOSITORY)
+FOREIGN_REPOSITORIES = (
+    "attacker/assay",
+    "gainratio/aml-filter",
+    "hseshadr/assay-evil",
+    "gainratio-evil/assay",
+    "",
+)
 
 
 class FoundationRejectedError(RuntimeError):
@@ -301,6 +311,50 @@ def test_should_construct_from_one_explicit_typed_workspace() -> None:
     assert signature.parameters["workspace"].annotation is dagger.Workspace
 
 
+def test_should_default_to_todays_repository_when_the_caller_names_none() -> None:
+    # Given / When
+    assay = Assay.create(cast(dagger.Workspace, RecordingWorkspace()))
+
+    # Then: no behavior change for existing callers (local `dagger call`, `dagger check`)
+    assert assay.repository == "hseshadr/assay"
+
+
+@pytest.mark.parametrize("repository", OWNERS)
+def test_should_accept_the_run_repository_under_either_owner(repository: str) -> None:
+    # Given / When
+    assay = Assay.create(cast(dagger.Workspace, RecordingWorkspace()), repository=repository)
+
+    # Then
+    assert assay.repository == repository
+    assert dagger_module.ALLOWED_REPOSITORIES == ("hseshadr/assay", "gainratio/assay")
+
+
+@pytest.mark.parametrize("repository", FOREIGN_REPOSITORIES)
+def test_should_refuse_a_run_repository_under_any_other_name(repository: str) -> None:
+    # When / Then: a fork, another repo, a look-alike, or nothing is refused before any work
+    with pytest.raises(ValueError, match="is not hseshadr/assay or gainratio/assay"):
+        Assay.create(cast(dagger.Workspace, RecordingWorkspace()), repository=repository)
+
+
+@pytest.mark.parametrize("repository", OWNERS)
+def test_should_clone_history_and_drive_tools_from_the_run_repository(
+    monkeypatch: pytest.MonkeyPatch, repository: str
+) -> None:
+    # Given
+    cloned: list[str] = []
+    monkeypatch.setattr(dagger_module.dag, "git", cloned.append)
+    assay = Assay.create(cast(dagger.Workspace, RecordingWorkspace()), repository=repository)
+
+    # When
+    assay._git()
+    repin = assay._repin_command("run", 7, "--digest", "d")
+
+    # Then
+    assert cloned == [f"https://github.com/{repository}.git"]
+    assert repin[2:6] == ["run", "--repository", repository, "--pr"]
+    assert assay._hosted_command("v1.0.0", "a" * 40)[5] == repository
+
+
 def test_should_pin_the_exact_foundation_dependency_and_lock() -> None:
     # Given / When
     config = json.loads((ROOT / "dagger.json").read_text(encoding="utf-8"))
@@ -329,23 +383,25 @@ def test_should_declare_the_dagger_main_object_for_clean_bootstrap() -> None:
     }
 
 
+@pytest.mark.parametrize("repository", OWNERS)
 def test_should_send_the_caller_snapshot_and_exact_identity_to_foundation(
-    monkeypatch: pytest.MonkeyPatch,
+    monkeypatch: pytest.MonkeyPatch, repository: str
 ) -> None:
     # Given
     source = cast(dagger.Directory, object())
     foundation = RecordingFoundation()
     monkeypatch.setattr(dagger_module, "_foundation", lambda: foundation, raising=False)
+    assay = Assay.create(cast(dagger.Workspace, RecordingWorkspace()), repository=repository)
 
     # When
-    bound = Assay._canonical_source(source, "a" * 40)
-    checked = Assay._shared_guard(source, "a" * 40)
+    bound = assay._canonical_source(source, "a" * 40)
+    checked = assay._shared_guard(source, "a" * 40)
 
-    # Then
+    # Then: Foundation checks the run's real identity, not a hardcoded owner
     assert bound is foundation.bound
     assert checked is foundation.checked
-    assert foundation.source_call == (source, REPOSITORY, "a" * 40)
-    assert foundation.guard_call == (source, REPOSITORY, "a" * 40)
+    assert foundation.source_call == (source, repository, "a" * 40)
+    assert foundation.guard_call == (source, repository, "a" * 40)
 
 
 def test_should_propagate_a_foundation_rejection_without_fallback(
@@ -357,9 +413,11 @@ def test_should_propagate_a_foundation_rejection_without_fallback(
     foundation.reject_guard = True
     monkeypatch.setattr(dagger_module, "_foundation", lambda: foundation, raising=False)
 
+    assay = Assay.create(cast(dagger.Workspace, RecordingWorkspace()))
+
     # When / Then
     with pytest.raises(FoundationRejectedError, match="shared guard rejected the source"):
-        Assay._shared_guard(source, "b" * 40)
+        assay._shared_guard(source, "b" * 40)
     assert foundation.guard_call == (source, REPOSITORY, "b" * 40)
 
 
@@ -738,6 +796,45 @@ def test_should_detect_github_actions_inside_the_npm_publisher(
     assert recording.secrets == {"ACTIONS_ID_TOKEN_REQUEST_URL", "ACTIONS_ID_TOKEN_REQUEST_TOKEN"}
 
 
+def _context_for(repository: str) -> dict[str, str]:
+    workflow_ref = f"{repository}/.github/workflows/publish.yml@refs/heads/main"
+    return PUBLISH_CONTEXT | {"GITHUB_REPOSITORY": repository, "GITHUB_WORKFLOW_REF": workflow_ref}
+
+
+@pytest.mark.parametrize("repository", OWNERS)
+def test_should_accept_a_provenance_context_from_either_owner(repository: str) -> None:
+    # Given
+    context = _context_for(repository)
+
+    # When
+    environment = Assay._provenance_environment(json.dumps(context))
+
+    # Then
+    assert environment["GITHUB_REPOSITORY"] == repository
+    assert environment["GITHUB_WORKFLOW_REF"] == context["GITHUB_WORKFLOW_REF"]
+
+
+@pytest.mark.parametrize("repository", FOREIGN_REPOSITORIES)
+def test_should_refuse_a_provenance_context_from_any_other_repository(repository: str) -> None:
+    # Given
+    context = json.dumps(_context_for(repository))
+
+    # When / Then
+    with pytest.raises(ValueError, match="provenance context GITHUB_REPOSITORY is not this"):
+        Assay._provenance_environment(context)
+
+
+@pytest.mark.parametrize(("repository", "other"), [OWNERS, OWNERS[::-1]])
+def test_should_refuse_a_workflow_ref_from_the_other_owner(repository: str, other: str) -> None:
+    # Given: each value is allowed alone, but they name different repositories
+    workflow_ref = _context_for(other)["GITHUB_WORKFLOW_REF"]
+    context = json.dumps(_context_for(repository) | {"GITHUB_WORKFLOW_REF": workflow_ref})
+
+    # When / Then
+    with pytest.raises(ValueError, match="provenance context GITHUB_WORKFLOW_REF is not this"):
+        Assay._provenance_environment(context)
+
+
 @pytest.mark.parametrize(
     ("name", "value"),
     [
@@ -875,5 +972,7 @@ def test_should_reduce_the_total_dagger_and_workflow_surface() -> None:
     # digest on every Dependabot dev-tool bump; its logic lives in scripts/, not here; then
     # to 860 for the GHCR mirror engine env on two workflows and the split mirror image ref;
     # then to 895 because the hseshadr/ci fleet policy forbids run steps, so the re-pin's
-    # three jobs moved into the repin-classify/commit/explain Dagger functions)
-    assert 400 <= lines <= 895
+    # three jobs moved into the repin-classify/commit/explain Dagger functions; then to 910
+    # for the run-repository constructor argument and its exact two-owner allow-list, so
+    # the gainratio org move cannot break the Foundation guard or the repin API calls)
+    assert 400 <= lines <= 910

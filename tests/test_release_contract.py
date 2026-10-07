@@ -270,8 +270,15 @@ def _npm_metadata(path: Path) -> dict[str, object]:
 
 
 def _npm_attestation(
-    *, tag: str, sha: str, subject_sha512: str, workflow_ref: str = "refs/heads/main"
+    *,
+    tag: str,
+    sha: str,
+    subject_sha512: str,
+    workflow_ref: str = "refs/heads/main",
+    repository: str = "hseshadr/assay",
+    source_repository: str = "",
 ) -> dict[str, object]:
+    source = source_repository or repository
     statement = {
         "_type": "https://in-toto.io/Statement/v1",
         "predicateType": "https://slsa.dev/provenance/v1",
@@ -285,14 +292,14 @@ def _npm_attestation(
             "buildDefinition": {
                 "externalParameters": {
                     "workflow": {
-                        "repository": "https://github.com/hseshadr/assay",
+                        "repository": f"https://github.com/{repository}",
                         "path": ".github/workflows/publish.yml",
                         "ref": workflow_ref,
                     }
                 },
                 "resolvedDependencies": [
                     {
-                        "uri": f"git+https://github.com/hseshadr/assay@{workflow_ref}",
+                        "uri": f"git+https://github.com/{source}@{workflow_ref}",
                         "digest": {"gitCommit": sha},
                     }
                 ],
@@ -338,6 +345,78 @@ def test_should_bind_pypi_provenance_to_filename_digest_and_publisher() -> None:
     assert guard.pypi_provenance_valid(payload, filename, "b" * 64) is False
     wrong = _pypi_attestation(filename=filename, sha256="a" * 64, repository="elsewhere/assay")
     assert guard.pypi_provenance_valid(wrong, filename, "a" * 64) is False
+
+
+#: The two owners this repository may publish from (hseshadr -> gainratio org move).
+OWNERS = ("hseshadr/assay", "gainratio/assay")
+FOREIGN_REPOSITORIES = (
+    "attacker/assay",
+    "gainratio/aml-filter",
+    "hseshadr/assay-evil",
+    "gainratio-evil/assay",
+    "",
+)
+
+
+@pytest.mark.parametrize("repository", OWNERS)
+def test_should_accept_pypi_provenance_from_either_owner(repository: str) -> None:
+    # Given a PEP 740 bundle whose trusted publisher is this repository under either owner
+    guard = _load_guard()
+    filename = "assay_engine-0.5.0.dev0-py3-none-any.whl"
+    payload = _pypi_attestation(filename=filename, sha256="a" * 64, repository=repository)
+    # When / Then releases from before and after the org move both verify
+    assert guard.pypi_provenance_valid(payload, filename, "a" * 64) is True
+
+
+@pytest.mark.parametrize("repository", FOREIGN_REPOSITORIES)
+def test_should_refuse_pypi_provenance_from_any_other_repository(repository: str) -> None:
+    # Given a bundle published by a fork, another repo, a look-alike, or nobody
+    guard = _load_guard()
+    filename = "assay_engine-0.5.0.dev0-py3-none-any.whl"
+    payload = _pypi_attestation(filename=filename, sha256="a" * 64, repository=repository)
+    # When / Then
+    assert guard.pypi_provenance_valid(payload, filename, "a" * 64) is False
+
+
+def _npm_state(tmp_path: Path, repository: str, source_repository: str = "") -> bool:
+    guard = _load_guard()
+    tarball = tmp_path / "gainratio-assay.tgz"
+    tarball.write_bytes(b"assay-npm")
+    digest = hashlib.sha512(tarball.read_bytes()).hexdigest()
+    attestation = _npm_attestation(
+        tag="v0.5.0",
+        sha="a" * 40,
+        subject_sha512=digest,
+        repository=repository,
+        source_repository=source_repository,
+    )
+    identity = guard.ProvenanceIdentity("v0.5.0", "a" * 40, digest)
+    return guard.npm_release_state(tarball, _npm_metadata(tarball), attestation, identity)
+
+
+@pytest.mark.parametrize("repository", OWNERS)
+def test_should_accept_npm_provenance_from_either_owner(tmp_path: Path, repository: str) -> None:
+    # When / Then an existing release built by this repository under either owner is skipped
+    assert _npm_state(tmp_path, repository) is False
+
+
+@pytest.mark.parametrize("repository", FOREIGN_REPOSITORIES)
+def test_should_refuse_npm_provenance_from_any_other_repository(
+    tmp_path: Path, repository: str
+) -> None:
+    # When / Then
+    with pytest.raises(ValueError, match="npm artifact or provenance mismatch"):
+        _npm_state(tmp_path, repository)
+
+
+@pytest.mark.parametrize(("repository", "source"), [OWNERS, OWNERS[::-1]])
+def test_should_refuse_npm_provenance_whose_source_is_the_other_owner(
+    tmp_path: Path, repository: str, source: str
+) -> None:
+    # Given each repository is allowed alone, but the workflow and the source disagree
+    # When / Then
+    with pytest.raises(ValueError, match="npm artifact or provenance mismatch"):
+        _npm_state(tmp_path, repository, source)
 
 
 def test_should_reject_duplicate_pypi_filename_records() -> None:

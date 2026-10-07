@@ -29,7 +29,7 @@ jobs:
         uses: dagger/dagger-for-github@27b130bf0f79a7f6fbbbe0fbca6760dc9bb40a77 # v8.4.1
         env:
           HEAD_SHA: ${{ github.event.pull_request.head.sha }}
-        with: {version: "0.21.8", verb: call, args: repin-classify --head-sha="$HEAD_SHA"}
+        with: {version: "0.21.8", verb: call, args: --repository="$GITHUB_REPOSITORY" repin-classify --head-sha="$HEAD_SHA"}
   repin:
     needs: derive
     if: needs.derive.outputs.decision == 'auto'
@@ -48,7 +48,7 @@ jobs:
         with:
           version: "0.21.8"
           verb: call
-          args: repin-commit --github-token=env:GH_TOKEN --pr-number="$PR_NUMBER" --digest="$DIGEST"
+          args: --repository="$GITHUB_REPOSITORY" repin-commit --github-token=env:GH_TOKEN --pr-number="$PR_NUMBER" --digest="$DIGEST"
   explain:
     needs: derive
     if: >-
@@ -70,4 +70,4 @@ jobs:
         with:
           version: "0.21.8"
           verb: call
-          args: repin-explain --github-token=env:GH_TOKEN --pr-number="$PR_NUMBER" --kind="$KIND"
+          args: --repository="$GITHUB_REPOSITORY" repin-explain --github-token=env:GH_TOKEN --pr-number="$PR_NUMBER" --kind="$KIND"

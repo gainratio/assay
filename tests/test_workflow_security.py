@@ -13,6 +13,9 @@ import yaml
 
 ROOT = Path(__file__).parents[1]
 WORKFLOW_ROOT = ROOT / ".github/workflows"
+#: Every Assay module call names the run's own repository (the runner's default
+#: GITHUB_REPOSITORY), which the module checks against its exact two-owner allow-list.
+RUN_REPOSITORY = '--repository="$GITHUB_REPOSITORY"'
 WORKFLOW_NAMES = {
     "dagger.yml",
     "dependabot-repin.yml",
@@ -115,7 +118,7 @@ def test_should_make_ci_one_checkout_and_one_dagger_call() -> None:
     assert _with(dagger_step) == {
         "version": "0.21.8",
         "verb": "call",
-        "args": "ci --commit-sha=${{ github.sha }}",
+        "args": f"{RUN_REPOSITORY} ci --commit-sha=${{{{ github.sha }}}}",
     }
 
 
@@ -131,14 +134,15 @@ def test_should_make_the_schedule_one_complete_dagger_security_call() -> None:
     assert set(_mapping(workflow["on"])) == {"schedule", "workflow_dispatch"}
     assert len(_steps(job)) == 2
     assert all("run" not in step for step in _steps(job))
-    assert _with(dagger_step)["args"] == "security --commit-sha=${{ github.sha }}"
+    expected = f"{RUN_REPOSITORY} security --commit-sha=${{{{ github.sha }}}}"
+    assert _with(dagger_step)["args"] == expected
 
 
 #: The release invocation, as `dagger/dagger-for-github` args. The action pastes args into
 #: its bash script, so every value is a double-quoted environment variable: bash expands it
 #: as one literal word and never parses it as code. No `${{ }}` expression appears.
 RELEASE_ARGS = (
-    'release-candidate --tag="$TAG" --commit-sha="$GITHUB_SHA" '
+    f'{RUN_REPOSITORY} release-candidate --tag="$TAG" --commit-sha="$GITHUB_SHA" '
     "--github-token=env:GITHUB_TOKEN export --path=candidate"
 )
 
@@ -173,7 +177,8 @@ def _expand_action_args(args: str, tag: str, cwd: Path) -> list[str]:
     """Expand args exactly as dagger-for-github's final bash step does, but print them."""
     bash = shutil.which("bash")
     assert bash is not None
-    env = {"TAG": tag, "GITHUB_SHA": "a" * 40, "PATH": "/usr/bin:/bin"}
+    env = {"TAG": tag, "GITHUB_SHA": "a" * 40, "GITHUB_REPOSITORY": "hseshadr/assay"}
+    env["PATH"] = "/usr/bin:/bin"
     result = subprocess.run(  # noqa: S603 - fixed bash, test-owned argv
         [bash, "-c", f"printf '%s\\0' {args}"], env=env, cwd=cwd, capture_output=True, check=True
     )
@@ -202,6 +207,7 @@ def test_should_pass_any_dispatched_tag_to_dagger_as_one_inert_argument(
 
     # Then the tag is one literal argument and bash ran nothing
     assert argv == [
+        "--repository=hseshadr/assay",
         "release-candidate",
         f"--tag={tag}",
         "--commit-sha=" + "a" * 40,
@@ -416,11 +422,12 @@ BASE_CHECKOUT = {"ref": "${{ github.event.pull_request.base.sha }}", "persist-cr
 PR_NUMBER = "${{ github.event.pull_request.number }}"
 REPIN_CALLS: dict[str, tuple[str, dict[str, str]]] = {
     "derive": (
-        'repin-classify --head-sha="$HEAD_SHA"',
+        f'{RUN_REPOSITORY} repin-classify --head-sha="$HEAD_SHA"',
         {"HEAD_SHA": "${{ github.event.pull_request.head.sha }}"},
     ),
     "repin": (
-        'repin-commit --github-token=env:GH_TOKEN --pr-number="$PR_NUMBER" --digest="$DIGEST"',
+        f"{RUN_REPOSITORY} repin-commit --github-token=env:GH_TOKEN "
+        '--pr-number="$PR_NUMBER" --digest="$DIGEST"',
         {
             "GH_TOKEN": "${{ github.token }}",
             "PR_NUMBER": PR_NUMBER,
@@ -428,7 +435,8 @@ REPIN_CALLS: dict[str, tuple[str, dict[str, str]]] = {
         },
     ),
     "explain": (
-        'repin-explain --github-token=env:GH_TOKEN --pr-number="$PR_NUMBER" --kind="$KIND"',
+        f"{RUN_REPOSITORY} repin-explain --github-token=env:GH_TOKEN "
+        '--pr-number="$PR_NUMBER" --kind="$KIND"',
         {
             "GH_TOKEN": "${{ github.token }}",
             "PR_NUMBER": PR_NUMBER,
