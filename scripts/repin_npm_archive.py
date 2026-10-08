@@ -20,7 +20,7 @@ before: a wrong digest still fails CI.
   through the GitHub REST API, re-check the Dependabot guard, then commit or comment.
 
 Every job is a base-commit checkout followed by one Dagger call, the only shape the
-hseshadr/ci fleet policy accepts; event values reach Dagger through step ``env``.
+gainratio/ci fleet policy accepts; event values reach Dagger through step ``env``.
 
 Security shape of .github/workflows/dependabot-repin.yml (GitHub docs: "Automating
 Dependabot with GitHub Actions", "Troubleshooting Dependabot on GitHub Actions",

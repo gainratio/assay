@@ -368,7 +368,7 @@ def test_should_pin_the_exact_foundation_dependency_and_lock() -> None:
     assert config["dependencies"] == [
         {
             "name": "foundation",
-            "source": f"github.com/hseshadr/ci/modules/portfolio-foundation@{FOUNDATION_SHA}",
+            "source": f"github.com/gainratio/ci/modules/portfolio-foundation@{FOUNDATION_SHA}",
             "pin": FOUNDATION_SHA,
         }
     ]
@@ -970,13 +970,13 @@ def test_should_reduce_the_total_dagger_and_workflow_surface() -> None:
     lines = sum(len(path.read_text(encoding="utf-8").splitlines()) for path in paths)
 
     # Then (budget raised from 700 to 720 for the two central lineage steps in publish.yml,
-    # hseshadr/ci#49: required publisher surface, not new repository logic; then to 780
+    # gainratio/ci#49: required publisher surface, not new repository logic; then to 780
     # for npm's validated GitHub Actions provenance context, without which npm cannot
     # detect Actions, exchange OIDC, or sign provenance inside the Dagger container; then
     # to 850 for dependabot-repin.yml, which replaces the human re-pin of the npm archive
     # digest on every Dependabot dev-tool bump; its logic lives in scripts/, not here; then
     # to 860 for the GHCR mirror engine env on two workflows and the split mirror image ref;
-    # then to 895 because the hseshadr/ci fleet policy forbids run steps, so the re-pin's
+    # then to 895 because the gainratio/ci fleet policy forbids run steps, so the re-pin's
     # three jobs moved into the repin-classify/commit/explain Dagger functions; then to 910
     # for the run-repository constructor argument and its exact two-owner allow-list, so
     # the gainratio org move cannot break the Foundation guard or the repin API calls)
