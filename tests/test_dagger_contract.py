@@ -904,7 +904,7 @@ def test_should_pin_every_downloaded_tool_and_package_manager() -> None:
     assert module.PNPM_VERSION == "11.5.0"
 
 
-MIRROR = "ghcr.io/hseshadr/mirror/"
+MIRROR = "ghcr.io/gainratio/mirror/"
 MIRROR_PYTHON = (
     MIRROR + "docker.io/library/python:3.13.14-slim@sha256:"
     "9662417aace5ae7b8e2609cce472b72a8958e134ba372808abe9cc1a0c0125e6"
