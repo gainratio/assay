@@ -24,7 +24,7 @@ import assay_dagger.main as dagger_module  # noqa: E402
 from assay_dagger.main import Assay  # noqa: E402
 from scripts.release_epoch import source_date_epoch  # noqa: E402
 
-FOUNDATION_SHA = "a88866232e679b6353d2b75bceb01969be739f67"
+FOUNDATION_SHA = "528eaec76121b75810c58bab610d9f2064b95227"
 #: The repository's home since the gainratio org move.
 REPOSITORY = "gainratio/assay"
 #: The pre-move owner, still accepted until the move finishes; nothing else is.
