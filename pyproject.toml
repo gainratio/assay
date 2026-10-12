@@ -40,7 +40,7 @@ cli = [
 
 [dependency-groups]
 dev = [
-    "dagger-io==0.21.9",
+    "dagger-io==0.21.10",
     "hatchling==1.32.4",
     "pip-audit==2.10.1",
     "pytest>=9.1.1",
