@@ -1,7 +1,7 @@
 # Re-pins the npm archive digest on Dependabot npm PRs when only devDependencies moved,
 # and explains the manual step otherwise. Design and security reasoning:
 # scripts/repin_npm_archive.py. The pin tests are unchanged. Every job is a base checkout
-# then one Dagger call (hseshadr/ci fleet policy); event values reach Dagger only by env.
+# then one Dagger call (gainratio/ci fleet policy); event values reach Dagger only by env.
 name: Dependabot re-pin
 on:
   pull_request:

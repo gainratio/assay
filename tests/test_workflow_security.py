@@ -295,8 +295,8 @@ def test_should_bind_download_and_remote_dagger_to_the_candidate_run_identity() 
         assert str(_with(dagger_step)["args"]).count('--repository="$GITHUB_REPOSITORY" ') == 1
 
 
-#: The central lineage proof (hseshadr/ci#49), pinned at a literal hseshadr/ci commit.
-LINEAGE_MODULE = re.compile(r"^github\.com/hseshadr/ci/modules/portfolio-foundation@[0-9a-f]{40}$")
+#: The central lineage proof (gainratio/ci#49), pinned at a literal gainratio/ci commit.
+LINEAGE_MODULE = re.compile(r"^github\.com/gainratio/ci/modules/portfolio-foundation@[0-9a-f]{40}$")
 #: Exact args: every value is a quoted env var bound to the triggering run, so a
 #: hard-coded run id or SHA cannot make the proof about a different run.
 LINEAGE_ARGS = (
@@ -319,7 +319,7 @@ LINEAGE_ENV = {
 
 def _is_lineage(step: dict[str, object]) -> bool:
     return str(_with(step).get("module", "")).startswith(
-        "github.com/hseshadr/ci/modules/portfolio-foundation@"
+        "github.com/gainratio/ci/modules/portfolio-foundation@"
     )
 
 
@@ -469,7 +469,7 @@ def test_should_keep_dependency_code_away_from_the_write_token() -> None:
 
 @pytest.mark.parametrize("name", sorted(REPIN_CALLS))
 def test_should_run_each_repin_job_as_base_checkout_then_one_dagger_call(name: str) -> None:
-    # Given: the hseshadr/ci fleet policy accepts only checkout then Dagger, no run step
+    # Given: the gainratio/ci fleet policy accepts only checkout then Dagger, no run step
     job = _job(_workflow("dependabot-repin.yml"), name)
     args, env = REPIN_CALLS[name]
 
