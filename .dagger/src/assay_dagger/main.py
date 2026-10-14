@@ -194,9 +194,9 @@ class Assay:
         return await self._repin_api(github_token, "run", pr_number, "--digest", digest)
 
     @function(cache="never")  # type: ignore[call-overload,untyped-decorator]  # SDK stub gap
-    async def repin_explain(self, github_token: dagger.Secret, pr_number: int, kind: str) -> str:
-        """Comment why one guarded Dependabot pull request needs a human re-pin."""
-        return await self._repin_api(github_token, "comment", pr_number, "--kind", kind)
+    async def repin_explain(self, github_token: dagger.Secret, pr_number: int) -> str:
+        """Comment why one guarded Dependabot npm pull request needs a human re-pin."""
+        return await self._repin_api(github_token, "comment", pr_number)
 
     async def _repin_api(self, token: dagger.Secret, verb: str, pr: int, *rest: str) -> str:
         tool = self._repin_tool().with_secret_variable("GH_TOKEN", token)
@@ -598,8 +598,8 @@ class Assay:
     def _base() -> dagger.Container:
         install = (
             "apt-get update && apt-get install -y --no-install-recommends "
-            "ca-certificates=20250419 curl=8.14.1-2+deb13u5 git=1:2.47.3-0+deb13u1 "
-            "jq=1.7.1-6+deb13u4 shellcheck=0.10.0-1 xz-utils=5.8.1-1+deb13u1 && "
+            "ca-certificates=20250419 curl=8.14.1-2+deb13u7 git=1:2.47.3-0+deb13u1 "
+            "jq=1.7.1-6+deb13u4 shellcheck=0.10.0-1 xz-utils=5.8.1-1+deb13u2 && "
             "rm -rf /var/lib/apt/lists/*"
         )
         return (

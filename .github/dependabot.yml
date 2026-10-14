@@ -1,5 +1,7 @@
-# One grouped PR per ecosystem per week for minor and patch updates; majors arrive as
-# separate PRs. npm group bumps get the archive digest re-pinned by
+# One grouped PR per ecosystem per month for minor and patch updates. Semver-major updates
+# are ignored here: majors are migrated by hand in a reviewed PR, because they are the bumps
+# that need code changes (TypeScript 7, vite-plugin-pwa 2 and friends across the portfolio).
+# npm group bumps get the archive digest re-pinned by
 # .github/workflows/dependabot-repin.yml when shipped bytes are unchanged.
 version: 2
 
@@ -10,9 +12,10 @@ version: 2
 #
 # The version comment beside each pin must name the EXACT version (`# v9.0.0`), never a
 # floating major (`# v9`). Dependabot rewrites the SHA and the comment together, and a
-# floating-major comment turns into a lie the moment upstream re-points the tag.
+# floating-major comment turns into a lie the moment upstream re-points the tag. The
+# workflow tests assert that property, not the SHA values, so an Actions bump stays green.
 #
-# Every ecosystem is grouped (`patterns: ["*"]`) so each weekly run opens ONE PR per
+# Every ecosystem is grouped (`patterns: ["*"]`) so each monthly run opens ONE PR per
 # ecosystem instead of one PR per dependency. Python uses the `uv` ecosystem, not `pip`:
 # `pip` widened pyproject ranges without relocking uv.lock, so its bumps were never
 # installed or tested under the locked environment.
@@ -20,8 +23,7 @@ updates:
   - package-ecosystem: github-actions
     directory: /
     schedule:
-      interval: weekly
-      day: monday
+      interval: monthly
       time: "06:00"
       timezone: Etc/UTC
     cooldown:
@@ -33,14 +35,17 @@ updates:
       actions:
         patterns: ["*"]
         update-types: ["minor", "patch"]
+    ignore:
+      # Majors are migrated by hand.
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]
     labels:
       - dependencies
       - github-actions
   - package-ecosystem: npm
-    directory: /ts
+    directory: /ts # the pnpm workspace root that owns ts/pnpm-lock.yaml
     schedule:
-      interval: weekly
-      day: monday
+      interval: monthly
       time: "06:00"
       timezone: Etc/UTC
     cooldown:
@@ -52,14 +57,21 @@ updates:
       npm:
         patterns: ["*"]
         update-types: ["minor", "patch"]
+    ignore:
+      # Majors are migrated by hand.
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]
     labels:
       - dependencies
       - npm
   - package-ecosystem: uv
     directory: /
+    # .dagger/ holds a generated, gitignored Dagger SDK; resolving it crashed the updater
+    # ("path based dependencies could not be retrieved: dagger-io", run 37676396221).
+    exclude-paths:
+      - ".dagger/**"
     schedule:
-      interval: weekly
-      day: monday
+      interval: monthly
       time: "06:00"
       timezone: Etc/UTC
     cooldown:
@@ -71,6 +83,10 @@ updates:
       python:
         patterns: ["*"]
         update-types: ["minor", "patch"]
+    ignore:
+      # Majors are migrated by hand.
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]
     labels:
       - dependencies
       - python

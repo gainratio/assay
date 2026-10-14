@@ -68,7 +68,9 @@ uv run poe benchmark
 - Run both complete language gates after shared-contract changes.
 - Dependabot npm PRs are re-pinned by `.github/workflows/dependabot-repin.yml` only when the
   packed archive differs from main in `package.json` devDependencies alone. Any change to shipped
-  bytes, and every GitHub Action SHA bump, still needs a human re-pin after review.
+  bytes still needs a human re-pin after review. GitHub Action bumps need no re-pin: the workflow
+  tests assert the property (40-hex SHA plus exact `# vX.Y.Z` comment), never SHA values.
+- Dependabot runs monthly, minor and patch only, grouped per ecosystem. Majors are migrated by hand.
 - Keep TypeScript scoring modules above 90% branch, function, and line coverage per file.
 - `@gainratio/assay@0.5.0-dev.6` is the authorized prerelease identity. Do not publish, tag, or
   change release settings without explicit approval.

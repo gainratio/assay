@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import os
+import re
 import subprocess
 from pathlib import Path
 
@@ -11,6 +12,9 @@ import yaml
 
 ROOT = Path(__file__).parents[1]
 WORKFLOW_ROOT = ROOT / ".github/workflows"
+PINNED_USE = re.compile(
+    r"\s*(?:- )?uses: [\w.-]+/[\w.-]+(?:/[\w./-]+)?@[0-9a-f]{40} # v\d+\.\d+\.\d+"
+)
 EXPECTED_NPM_SHA256 = "60ce4fe119a33b25335626e5fbd26e2ab36a9c11b015dabb350f1a796205036d"
 
 
@@ -50,19 +54,22 @@ def _uses(job: object) -> tuple[str, ...]:
     return tuple(str(step["uses"]) for step in _steps(job) if "uses" in step)
 
 
-def test_should_keep_action_pins_bound_to_reviewed_versions() -> None:
-    # Given
-    source = "\n".join(path.read_text(encoding="utf-8") for path in WORKFLOW_ROOT.glob("*.yml"))
+def test_should_pin_every_action_to_an_immutable_sha_with_its_exact_version() -> None:
+    # Given: the property, not a copy of the SHAs. Dependabot moves a SHA and its comment
+    # together, so a copied SHA list only turned every Actions bump red.
+    lines = [
+        line
+        for path in sorted(WORKFLOW_ROOT.glob("*.yml"))
+        for line in path.read_text(encoding="utf-8").splitlines()
+        if "uses:" in line
+    ]
 
-    # When / Then
-    expected = {
-        "actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1",
-        "actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1",
-        "actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1",
-        "dagger/dagger-for-github@27b130bf0f79a7f6fbbbe0fbca6760dc9bb40a77 # v8.4.1",
-        "pypa/gh-action-pypi-publish@dc37677b2e1c63e2034f94d8a5b11f265b73ba33 # v1.14.2",
-    }
-    assert all(item in source for item in expected)
+    # When
+    unpinned = [line.strip() for line in lines if not PINNED_USE.fullmatch(line)]
+
+    # Then: a tag or branch ref is mutable; a floating-major comment hides what was reviewed
+    assert lines
+    assert unpinned == []
 
 
 def test_should_make_every_non_pypi_ci_or_cd_step_a_dagger_transport() -> None:
