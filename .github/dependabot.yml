@@ -66,6 +66,10 @@ updates:
       - npm
   - package-ecosystem: uv
     directory: /
+    # .dagger/ holds a generated, gitignored Dagger SDK; resolving it crashed the updater
+    # ("path based dependencies could not be retrieved: dagger-io", run 37676396221).
+    exclude-paths:
+      - ".dagger/**"
     schedule:
       interval: monthly
       time: "06:00"
