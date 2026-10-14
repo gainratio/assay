@@ -926,6 +926,47 @@ def test_should_pull_every_image_from_the_ghcr_mirror_by_digest() -> None:
     assert project["tool"]["dagger"]["base-image"] == MIRROR_PYTHON
 
 
+class RecordingBase:
+    """Record the image and commands the base toolchain container is built from."""
+
+    def __init__(self) -> None:
+        self.image = ""
+        self.commands: list[list[str]] = []
+
+    def container(self, platform: object = None) -> Self:
+        return self
+
+    def from_(self, address: str) -> Self:
+        self.image = address
+        return self
+
+    def with_exec(self, args: list[str]) -> Self:
+        self.commands.append(args)
+        return self
+
+
+BASE_PACKAGES = ["ca-certificates", "curl", "git", "jq", "shellcheck", "xz-utils"]
+
+
+def test_should_install_unpinned_apt_packages_from_the_digest_pinned_base(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    # Given a recorder in place of the Dagger client. Exact apt versions break on every Debian
+    # security release; the digest-pinned base image is what makes the build reproducible.
+    recording = RecordingBase()
+    monkeypatch.setattr(dagger_module, "dag", recording)
+
+    # When the base toolchain container is built
+    Assay._base()
+
+    # Then it starts from the mirrored digest and installs packages by name only
+    [[shell, flags, script]] = recording.commands
+    packages = script.split("apt-get install -y --no-install-recommends ", 1)[1]
+    assert recording.image == MIRROR_PYTHON
+    assert (shell, flags) == ("sh", "-ceu")
+    assert packages.split(" && ", 1)[0].split() == BASE_PACKAGES
+
+
 def test_should_start_the_ci_engine_from_the_ghcr_mirror() -> None:
     # Given the pull-request and security workflows
     names = ("dagger.yml", "security-audit.yml")
