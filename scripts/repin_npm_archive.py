@@ -39,8 +39,9 @@ Dependabot with GitHub Actions", "Troubleshooting Dependabot on GitHub Actions",
   GitHub puts the pull_request run for a GITHUB_TOKEN commit in an approval-required
   state; one "Approve workflows to run" click starts the required Dagger check. Making
   that automatic needs a GitHub App token stored as a Dependabot secret (owner's call).
-* ``explain`` comments on PRs that need a human: shipped bytes changed, or a GitHub
-  Action SHA pin moved (those pins record a human review and are never automated).
+* ``explain`` comments on npm PRs that need a human because shipped bytes changed.
+  GitHub Action bumps need nothing here: the workflow tests assert the pin PROPERTY
+  (40-hex SHA plus exact ``# vX.Y.Z`` comment), not copied SHA values.
 """
 
 from __future__ import annotations
@@ -76,21 +77,13 @@ MUTATION: Final = (
     "{ createCommitOnBranch(input: $input) { commit { oid url } } }"
 )
 HEADLINE: Final = "test: re-pin npm archive digest for the dev-tool bump"
-EXPLANATIONS: Final = {
-    "archive": (
-        "Not re-pinned automatically: this bump changes shipped bytes of the npm archive "
-        "(built code, runtime manifest fields, or the file list), not only devDependencies. "
-        "A human must review the archive diff (the `derive` job summary names the changed "
-        "members), then update EXPECTED_ARCHIVE_SHA256 in "
-        f"{', '.join(map(str, PIN_SITES))}."
-    ),
-    "actions": (
-        "Needs a human re-pin by design: GitHub Action SHA pins record a review of an "
-        "external release, so they are never updated automatically. Review the release "
-        "diff for each bumped action, then update the reviewed pins in "
-        "tests/test_workflow_contract.py and tests/test_workflow_security.py."
-    ),
-}
+EXPLANATION: Final = (
+    "Not re-pinned automatically: this bump changes shipped bytes of the npm archive "
+    "(built code, runtime manifest fields, or the file list), not only devDependencies. "
+    "A human must review the archive diff (the `derive` job summary names the changed "
+    "members), then update EXPECTED_ARCHIVE_SHA256 in "
+    f"{', '.join(map(str, PIN_SITES))}."
+)
 BODY: Final = (
     "Automated by .github/workflows/dependabot-repin.yml. The packed archive changed\n"
     "only in package.json devDependencies; every shipped member is byte-identical to\n"
@@ -101,7 +94,6 @@ BODY: Final = (
 API: Final = "https://api.github.com"
 DEPENDABOT: Final = "dependabot[bot]"
 NPM_BRANCH: Final = "dependabot/npm_and_yarn/"
-EXPLAINED_BRANCHES: Final = (NPM_BRANCH, "dependabot/github_actions/")
 ALREADY_PINNED: Final = "digest already pinned"
 
 
@@ -334,18 +326,17 @@ def repin_pull_request(github: GitHub, repository: str, number: int, digest: str
     )
 
 
-def explain_pull_request(github: GitHub, repository: str, number: int, kind: str) -> str:
-    """Comment why one guarded Dependabot pull request needs a human re-pin."""
-    _pull_request(github, repository, number, EXPLAINED_BRANCHES)
-    body = {"body": EXPLANATIONS[kind]}
-    github.post_json(f"/repos/{repository}/issues/{number}/comments", body)
-    return f"explained {kind} re-pin on #{number}"
+def explain_pull_request(github: GitHub, repository: str, number: int) -> str:
+    """Comment why one guarded Dependabot npm pull request needs a human re-pin."""
+    _pull_request(github, repository, number, (NPM_BRANCH,))
+    github.post_json(f"/repos/{repository}/issues/{number}/comments", {"body": EXPLANATION})
+    return f"explained archive re-pin on #{number}"
 
 
 def _parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="Re-pin the npm archive digest.")
     commands = parser.add_subparsers(dest="command", required=True)
-    commands.add_parser("explain").add_argument("kind", choices=sorted(EXPLANATIONS))
+    commands.add_parser("explain")
     _add_pin_commands(commands)
     return parser
 
@@ -366,15 +357,11 @@ def _add_pin_commands(commands: argparse._SubParsersAction[argparse.ArgumentPars
 
 
 def _add_api_commands(commands: argparse._SubParsersAction[argparse.ArgumentParser]) -> None:
-    api_commands: tuple[tuple[str, str, list[str] | None], ...] = (
-        ("run", "--digest", None),
-        ("comment", "--kind", sorted(EXPLANATIONS)),
-    )
-    for name, flag, choices in api_commands:
+    for name in ("run", "comment"):
         api = commands.add_parser(name)
         api.add_argument("--repository", required=True)
         api.add_argument("--pr", type=int, required=True)
-        api.add_argument(flag, required=True, choices=choices)
+    commands.choices["run"].add_argument("--digest", required=True)
 
 
 def _classify_lines(arguments: argparse.Namespace) -> list[str]:
@@ -395,7 +382,7 @@ def _commit_lines(arguments: argparse.Namespace) -> list[str]:
 
 
 def _explain_lines(arguments: argparse.Namespace) -> list[str]:
-    return [EXPLANATIONS[arguments.kind]]
+    return [EXPLANATION]
 
 
 def _token() -> RestGitHub:
@@ -412,7 +399,7 @@ def _run_lines(arguments: argparse.Namespace) -> list[str]:
 
 def _comment_lines(arguments: argparse.Namespace) -> list[str]:
     github, repository = _token(), arguments.repository
-    return [explain_pull_request(github, repository, arguments.pr, arguments.kind)]
+    return [explain_pull_request(github, repository, arguments.pr)]
 
 
 COMMANDS: Final = {

@@ -24,6 +24,7 @@ WORKFLOW_NAMES = {
     "security-audit.yml",
 }
 PINNED = re.compile(r"^[\w.-]+/[\w.-]+(?:/[\w./-]+)?@[0-9a-f]{40}$")
+CHECKOUT_THEN_DAGGER = ("actions/checkout", "dagger/dagger-for-github")
 
 
 def _mapping(value: object) -> dict[str, object]:
@@ -56,6 +57,11 @@ def _steps(job: dict[str, object]) -> list[dict[str, object]]:
 
 def _uses(job: dict[str, object]) -> tuple[str, ...]:
     return tuple(str(step["uses"]) for step in _steps(job) if "uses" in step)
+
+
+def _actions(job: dict[str, object]) -> tuple[str, ...]:
+    # Action names only: SHA immutability is asserted once, for every step, by PINNED.
+    return tuple(reference.partition("@")[0] for reference in _uses(job))
 
 
 def _with(step: dict[str, object]) -> dict[str, object]:
@@ -110,10 +116,7 @@ def test_should_make_ci_one_checkout_and_one_dagger_call() -> None:
     # satisfy the required "Dagger" check (observed on the #101 pilot). The re-pin commit
     # instead gets the documented approval-required pull_request run.
     assert set(_mapping(workflow["on"])) == {"push", "pull_request"}
-    assert _uses(job) == (
-        "actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1",
-        "dagger/dagger-for-github@27b130bf0f79a7f6fbbbe0fbca6760dc9bb40a77",
-    )
+    assert _actions(job) == CHECKOUT_THEN_DAGGER
     assert all("run" not in step for step in _steps(job))
     assert _with(dagger_step) == {
         "version": "0.21.8",
@@ -418,7 +421,6 @@ def test_should_run_the_repin_only_for_same_repository_dependabot_npm_prs() -> N
     assert "github.actor" not in (WORKFLOW_ROOT / "dependabot-repin.yml").read_text("utf-8")
 
 
-DAGGER_REPIN = "dagger/dagger-for-github@27b130bf0f79a7f6fbbbe0fbca6760dc9bb40a77"
 BASE_CHECKOUT = {"ref": "${{ github.event.pull_request.base.sha }}", "persist-credentials": "false"}
 PR_NUMBER = "${{ github.event.pull_request.number }}"
 REPIN_CALLS: dict[str, tuple[str, dict[str, str]]] = {
@@ -436,13 +438,8 @@ REPIN_CALLS: dict[str, tuple[str, dict[str, str]]] = {
         },
     ),
     "explain": (
-        f"{RUN_REPOSITORY} repin-explain --github-token=env:GH_TOKEN "
-        '--pr-number="$PR_NUMBER" --kind="$KIND"',
-        {
-            "GH_TOKEN": "${{ github.token }}",
-            "PR_NUMBER": PR_NUMBER,
-            "KIND": "${{ needs.derive.outputs.decision == 'review' && 'archive' || 'actions' }}",
-        },
+        f'{RUN_REPOSITORY} repin-explain --github-token=env:GH_TOKEN --pr-number="$PR_NUMBER"',
+        {"GH_TOKEN": "${{ github.token }}", "PR_NUMBER": PR_NUMBER},
     ),
 }
 
@@ -477,25 +474,24 @@ def test_should_run_each_repin_job_as_base_checkout_then_one_dagger_call(name: s
     steps = _steps(job)
 
     # Then: the base commit's module and tool do the work; event values arrive by env
-    assert _uses(job) == ("actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1", DAGGER_REPIN)
+    assert _actions(job) == CHECKOUT_THEN_DAGGER
     assert not [step for step in steps if "run" in step]
     assert _with(steps[0]) == BASE_CHECKOUT
     assert _mapping(steps[1].get("env")) == env
     assert _with(steps[1]) == {"version": "0.21.8", "verb": "call", "args": args}
 
 
-def test_should_explain_manual_repins_once() -> None:
+def test_should_explain_manual_archive_repins_once_and_only_after_the_guarded_derive() -> None:
     # Given
     job = _job(_workflow("dependabot-repin.yml"), "explain")
 
     # When
     condition = " ".join(str(job["if"]).split())
 
-    # Then
-    assert condition.startswith("always() && github.event.action == 'opened' && ")
-    assert "github.event.pull_request.user.login == 'dependabot[bot]'" in condition
-    assert "github.event.pull_request.head.repo.full_name == github.repository" in condition
-    assert "startsWith(github.head_ref, 'dependabot/github_actions/')" in condition
+    # Then: no always(), so explain runs only when the Dependabot-guarded derive succeeded
+    assert condition == (
+        "github.event.action == 'opened' && needs.derive.outputs.decision == 'review'"
+    )
 
 
 def test_should_expose_the_repin_graph_with_typed_tokens() -> None:
@@ -505,4 +501,4 @@ def test_should_expose_the_repin_graph_with_typed_tokens() -> None:
     # Then
     assert "def repin_classify(self, head_sha: str)" in module
     assert "github_token: dagger.Secret, pr_number: int, digest: str" in module
-    assert "github_token: dagger.Secret, pr_number: int, kind: str" in module
+    assert "def repin_explain(self, github_token: dagger.Secret, pr_number: int)" in module

@@ -240,21 +240,15 @@ def test_should_require_review_when_a_non_object_manifest_changes() -> None:
     assert classify(base, head).decision == "review"
 
 
-@pytest.mark.parametrize(
-    ("kind", "names"),
-    [
-        ("archive", ("EXPECTED_ARCHIVE_SHA256", *map(str, PIN_SITES))),
-        ("actions", ("tests/test_workflow_contract.py", "tests/test_workflow_security.py")),
-    ],
-)
-def test_should_explain_each_manual_repin_and_where_to_make_it(
-    kind: str, names: tuple[str, ...], capsys: pytest.CaptureFixture[str]
+def test_should_explain_the_manual_archive_repin_and_where_to_make_it(
+    capsys: pytest.CaptureFixture[str],
 ) -> None:
     # Given / When
-    status = main(["explain", kind])
+    status = main(["explain"])
 
     # Then
     message = capsys.readouterr().out
+    names = ("EXPECTED_ARCHIVE_SHA256", *map(str, PIN_SITES))
     assert status == 0
     assert "human" in message
     assert all(name in message for name in names)
@@ -394,24 +388,26 @@ def test_should_refuse_a_graphql_error_before_cancelling_anything(tmp_path: Path
     assert replies == ["/graphql"]
 
 
-@pytest.mark.parametrize(
-    ("ref", "kind"),
-    [("dependabot/npm_and_yarn/x", "archive"), ("dependabot/github_actions/x", "actions")],
-)
-def test_should_comment_the_explanation_on_a_guarded_pull_request(
-    tmp_path: Path, ref: str, kind: str
-) -> None:
+def test_should_comment_the_explanation_on_a_guarded_npm_pull_request(tmp_path: Path) -> None:
     # Given
-    github = _github(tmp_path, _pull(ref=ref), [])
+    github = _github(tmp_path, _pull(ref="dependabot/npm_and_yarn/x"), [])
 
     # When
-    outcome = tool.explain_pull_request(github, REPOSITORY, 7, kind)
+    outcome = tool.explain_pull_request(github, REPOSITORY, 7)
 
     # Then
-    assert github.posts == [
-        (f"/repos/{REPOSITORY}/issues/7/comments", {"body": tool.EXPLANATIONS[kind]})
-    ]
-    assert outcome == f"explained {kind} re-pin on #7"
+    assert github.posts == [(f"/repos/{REPOSITORY}/issues/7/comments", {"body": tool.EXPLANATION})]
+    assert outcome == "explained archive re-pin on #7"
+
+
+def test_should_refuse_to_comment_on_an_actions_bump_that_needs_no_repin(tmp_path: Path) -> None:
+    # Given: Action pins are asserted as a property, so an Actions bump has nothing to re-pin
+    github = _github(tmp_path, _pull(ref="dependabot/github_actions/x"), [])
+
+    # When / Then
+    with pytest.raises(RepinError, match="not a Dependabot npm branch"):
+        tool.explain_pull_request(github, REPOSITORY, 7)
+    assert github.posts == []
 
 
 def test_should_refuse_to_comment_on_a_non_dependabot_pull_request(tmp_path: Path) -> None:
@@ -420,7 +416,7 @@ def test_should_refuse_to_comment_on_a_non_dependabot_pull_request(tmp_path: Pat
 
     # When / Then
     with pytest.raises(RepinError, match="not opened by dependabot"):
-        tool.explain_pull_request(github, REPOSITORY, 7, "archive")
+        tool.explain_pull_request(github, REPOSITORY, 7)
     assert github.posts == []
 
 
@@ -446,7 +442,7 @@ def test_should_classify_as_json_for_the_workflow_outputs(
     "argv",
     [
         ["run", "--repository", REPOSITORY, "--pr", "7", "--digest", NEW],
-        ["comment", "--repository", REPOSITORY, "--pr", "7", "--kind", "archive"],
+        ["comment", "--repository", REPOSITORY, "--pr", "7"],
     ],
 )
 def test_should_refuse_to_call_github_without_a_token(
@@ -475,13 +471,13 @@ def test_should_run_and_comment_against_the_rest_api_with_the_environment_token(
     # When
     statuses = [
         main(["run", "--repository", REPOSITORY, "--pr", "7", "--digest", NEW]),
-        main(["comment", "--repository", REPOSITORY, "--pr", "7", "--kind", "actions"]),
+        main(["comment", "--repository", REPOSITORY, "--pr", "7"]),
     ]
 
     # Then
     assert statuses == [0, 0]
     assert capsys.readouterr().out.split() == ["repinned", "explained"]
-    assert [call[1:] for call in seen] == [(REPOSITORY, 7, NEW), (REPOSITORY, 7, "actions")]  # type: ignore[index]
+    assert [call[1:] for call in seen] == [(REPOSITORY, 7, NEW), (REPOSITORY, 7)]  # type: ignore[index]
     assert all(isinstance(call[0], tool.RestGitHub) for call in seen)  # type: ignore[index]
 
 

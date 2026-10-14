@@ -938,15 +938,15 @@ def test_should_start_the_ci_engine_from_the_ghcr_mirror() -> None:
 def test_should_lock_temporal_audit_tools_in_the_repository_environment() -> None:
     # Given / When
     project = (ROOT / "pyproject.toml").read_text(encoding="utf-8")
-    lock = (ROOT / "uv.lock").read_text(encoding="utf-8")
+    lock = tomllib.loads((ROOT / "uv.lock").read_text(encoding="utf-8"))
+    locked = {str(entry["name"]): str(entry.get("version")) for entry in lock["package"]}
 
-    # Then scheduled audits cannot resolve an unreviewed uvx environment at runtime
-    assert '"pip-audit==2.10.1"' in project
-    assert '"zizmor==1.30.1"' in project
+    # Then scheduled audits cannot resolve an unreviewed uvx environment at runtime: each
+    # tool is an exact pin that agrees with uv.lock (read, not copied, so bumps stay green)
+    assert f'"pip-audit=={locked["pip-audit"]}"' in project
+    assert f'"zizmor=={locked["zizmor"]}"' in project
     assert "uvx --from pip-audit" not in project
     assert "uvx zizmor" not in project
-    assert 'name = "pip-audit"' in lock
-    assert 'name = "zizmor"' in lock
 
 
 def test_should_install_both_locked_uv_executables() -> None:
