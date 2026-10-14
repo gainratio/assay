@@ -596,10 +596,12 @@ class Assay:
 
     @staticmethod
     def _base() -> dagger.Container:
+        # Packages by name only: PYTHON_IMAGE's digest pins the Debian release. Exact apt
+        # versions broke the build on every Debian security update; downloaded tools stay
+        # checksum- or digest-pinned below.
         install = (
             "apt-get update && apt-get install -y --no-install-recommends "
-            "ca-certificates=20250419 curl=8.14.1-2+deb13u7 git=1:2.47.3-0+deb13u1 "
-            "jq=1.7.1-6+deb13u4 shellcheck=0.10.0-1 xz-utils=5.8.1-1+deb13u2 && "
+            "ca-certificates curl git jq shellcheck xz-utils && "
             "rm -rf /var/lib/apt/lists/*"
         )
         return (
