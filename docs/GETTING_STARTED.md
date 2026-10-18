@@ -65,7 +65,7 @@ It also builds both packages and checks the docs' examples. The second is the Ty
 check: Biome lint, strict types, tests with coverage, and the build. Success is a coverage
 summary and exit code 0 from each.
 
-Timing on a MacBook from a fresh clone: the Python check took about 8.5 minutes (847 tests),
+Timing on a MacBook from a fresh clone: the Python check took about 8.5 minutes (999 tests),
 and the TypeScript check about 40 seconds.
 
 CI runs the same checks, plus mutation tests, dependency audits, workflow checks, and

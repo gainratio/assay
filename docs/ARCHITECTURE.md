@@ -1,7 +1,12 @@
 # Assay architecture
 
-> **TL;DR:** Assay has two independent production packages with one shared semantic
-> scoring contract. Repository support files do not become runtime packages.
+> **TL;DR:** Assay combines multiple measurements on different scales into a single explained
+> score (`0` to `1`) in Python and TypeScript. A strict parser validates the formula and inputs
+> before any arithmetic runs, combines them using one of three deterministic methods
+> (`weighted_mean`, `additive`, or `minimum`) in declared order, and returns the composite score
+> with every component's contribution, propagated uncertainty intervals, and an order-preserving
+> `inputs_hash`—replaying to identical numbers across two independent production packages with one
+> shared semantic scoring contract. Repository support files do not become runtime packages.
 
 ## Overview
 
@@ -287,7 +292,7 @@ composition. Controls and limits are in [Operations](OPERATIONS.md).
 
 **Shipped:** the three portable methods, strict request parsing, interval propagation,
 the `assay` command line, Python optional calculators, and the smaller TypeScript
-calculator set, in the `v0.5.0-dev.3` prerelease.
+calculator set, in the `v0.5.0-dev.6` prerelease.
 
 **Planned (not shipped):** a stable 0.5.0 release of both packages. Complete
 optional-metric parity between Python and TypeScript is not planned or claimed. See the
