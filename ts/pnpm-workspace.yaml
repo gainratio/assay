@@ -1,2 +1,9 @@
+packages: []
+
 overrides:
   vite: 8.3.5
+
+# Quarantine, in minutes: a version must have been on npm for a full day before
+# this repo resolves it. Declared here, not inherited from pnpm's default, so a
+# package-manager upgrade cannot silently remove the protection.
+minimumReleaseAge: 1440
