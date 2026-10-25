@@ -650,7 +650,9 @@ def _require_calibration_positives(report: _BinaryReportProof) -> None:
 
 
 def _require_calibration_ece(report: _BinaryReportProof, total: int) -> None:
-    if report.calibration.ece != _expected_ece(report.calibration, total):
+    # Same ULP-scale tolerance as every other summary: the reported ECE and the
+    # value recomputed from the bins are the same number up to float summation.
+    if not _summary_matches(report.calibration.ece, _expected_ece(report.calibration, total)):
         raise ValueError
 
 
