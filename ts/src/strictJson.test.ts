@@ -25,7 +25,9 @@ describe("parseStrictJson", () => {
       unknown
     >;
     expect(Object.getPrototypeOf(value)).toBe(Object.prototype);
-    expect(Object.getOwnPropertyDescriptor(value, "__proto__")?.value).toEqual({ polluted: true });
+    expect(Object.getOwnPropertyDescriptor(value, "__proto__")?.value).toEqual({
+      polluted: true,
+    });
   });
 
   it("is wired into parseRequestJson", () => {
