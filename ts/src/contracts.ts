@@ -1,4 +1,5 @@
 import { ContractCode, ContractValidationError } from "./errors.js";
+import { parseStrictJson } from "./strictJson.js";
 
 export type Direction = "higher_is_better" | "lower_is_better";
 export type ClampPolicy = "reject" | "clamp";
@@ -541,7 +542,7 @@ function deepFreeze<T extends object>(value: T): T {
 function decodeJson(input: string): unknown {
   if (typeof input !== "string") fail(ContractCode.INVALID_CONTRACT);
   try {
-    return JSON.parse(input) as unknown;
+    return parseStrictJson(input);
   } catch {
     fail(ContractCode.INVALID_CONTRACT);
   }
