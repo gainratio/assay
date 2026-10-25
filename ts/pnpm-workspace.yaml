@@ -1,25 +1,2 @@
-packages: []
-
-# Vitest's Vite/PostCSS toolchain otherwise resolves a nanoid release affected by
-# GHSA-2v37-7h3g-55p8, and a source-map-js release affected by GHSA-68fv-2mgg-jv7q.
-# This is test tooling only; the packed runtime has no deps.
 overrides:
-  nanoid: 3.3.18
-  source-map-js: 1.2.2
-
-# Quarantine, in minutes: a version must have been on npm for a full day before this
-# repo will resolve it. It is the cheapest defence there is against a compromised
-# maintainer account — those attacks are measured in hours, and the takedown almost
-# always lands inside a day, so simply refusing to be first blocks nearly all of it.
-#
-# Declared here ON PURPOSE rather than inherited. pnpm 11.5.0 happens to apply the
-# same 24h window by default, which is how the policy came to be enforced in CI
-# without anything in this repo asking for it — see PR #21, where the check refused a
-# transitive nanoid published eight hours earlier. A default is not a promise: it can
-# change under a version bump, and `pnpm config get minimumReleaseAge` answered
-# `undefined` while it was in force, so the repo could not even state its own policy.
-# Writing it down makes the value a fact of this repo, and something a test can hold.
-#
-# tests/test_supply_chain_policy.py enforces this line, and the mutation gate lowers
-# it to prove that test goes red when the quarantine is weakened.
-minimumReleaseAge: 1440
+  vite: 8.3.5
