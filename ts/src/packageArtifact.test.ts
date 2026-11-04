@@ -87,11 +87,11 @@ describe("the real npm artifact", () => {
         run("tar", ["-xOzf", archive, "package/package.json"]),
       ) as Readonly<Record<string, unknown>>;
       const readme = run("tar", ["-xOzf", archive, "package/README.md"]);
+      expect(manifest.dependencies).toBeUndefined();
       expect(manifest).toMatchObject({
         name: "@gainratio/assay",
         version: "0.5.0-dev.6",
         type: "module",
-        dependencies: {},
         exports: {
           ".": {
             types: "./dist/index.d.ts",
