@@ -22,7 +22,7 @@ _PNPM_DOCUMENTS = (_ROOT / "QUICKSTART.md", _ROOT / "ts" / "README.md", _ROOT / 
 _DEMO_DOCUMENTS = (_ROOT / "README.md", _ROOT / "QUICKSTART.md", _ROOT / "ts" / "README.md")
 _MULTIPLY = "\N{MULTIPLICATION SIGN}"
 _ARCHIVE = "gainratio-assay-0.5.0-dev.6.tgz"
-_ARCHIVE_SHA256 = "60ce4fe119a33b25335626e5fbd26e2ab36a9c11b015dabb350f1a796205036d"
+_ARCHIVE_SHA256 = "3105ce580b8f19c1296a41e9399b7bb34aa5196a53b3fe8ed3fc160fbdd87364"
 _ARCHIVE_NORMALIZER = _ROOT / "ts" / "scripts" / "normalize-package-archive.mjs"
 _SHELL_BLOCK = re.compile(r"^```bash\n(.*?)^```$", re.MULTILINE | re.DOTALL)
 _ARCHIVE_MEMBERS = (
@@ -48,6 +48,8 @@ _ARCHIVE_MEMBERS = (
     "package/dist/ranking.js",
     "package/dist/requestHash.d.ts",
     "package/dist/requestHash.js",
+    "package/dist/strictJson.d.ts",
+    "package/dist/strictJson.js",
     "package/dist/weightedMean.d.ts",
     "package/dist/weightedMean.js",
     "package/package.json",

@@ -15,7 +15,7 @@ WORKFLOW_ROOT = ROOT / ".github/workflows"
 PINNED_USE = re.compile(
     r"\s*(?:- )?uses: [\w.-]+/[\w.-]+(?:/[\w./-]+)?@[0-9a-f]{40} # v\d+\.\d+\.\d+"
 )
-EXPECTED_NPM_SHA256 = "60ce4fe119a33b25335626e5fbd26e2ab36a9c11b015dabb350f1a796205036d"
+EXPECTED_NPM_SHA256 = "3105ce580b8f19c1296a41e9399b7bb34aa5196a53b3fe8ed3fc160fbdd87364"
 
 
 def _node_environment() -> dict[str, str]:

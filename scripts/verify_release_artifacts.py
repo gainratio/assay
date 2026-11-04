@@ -72,6 +72,8 @@ _NPM_MEMBERS = frozenset(
         "package/dist/ranking.js",
         "package/dist/requestHash.d.ts",
         "package/dist/requestHash.js",
+        "package/dist/strictJson.d.ts",
+        "package/dist/strictJson.js",
         "package/dist/weightedMean.d.ts",
         "package/dist/weightedMean.js",
     }
