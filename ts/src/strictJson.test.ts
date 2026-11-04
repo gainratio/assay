@@ -33,4 +33,28 @@ describe("parseStrictJson", () => {
   it("is wired into parseRequestJson", () => {
     expect(() => parseRequestJson('{"method":{},"method":{}}')).toThrow();
   });
+
+  it("handles empty containers, whitespace, booleans, and rejects malformed grammar", () => {
+    expect(parseStrictJson(" \t\n\r [ {}, [], false ] ")).toEqual([
+      {},
+      [],
+      false,
+    ]);
+    for (const invalid of [
+      "1 2",
+      "tru",
+      "fal",
+      "nul",
+      "xyz",
+      '"unclosed',
+      '"\u0001"',
+      "[1 2]",
+      "{1:2}",
+      '{"a" 1}',
+      '{"a":1 "b":2}',
+      `${"[".repeat(130)}${"]".repeat(130)}`,
+    ]) {
+      expect(() => parseStrictJson(invalid)).toThrow(SyntaxError);
+    }
+  });
 });
