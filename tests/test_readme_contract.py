@@ -21,6 +21,7 @@ _SECTIONS = (
     "## What it does not do",
     "## When to use something else",
     "## Install",
+    "## Under the hood (for developers)",
     "## Develop",
     "## More detail",
     "## License",
@@ -135,6 +136,7 @@ def test_should_link_every_technical_doc_from_more_detail() -> None:
         "QUICKSTART.md",
         "ts/README.md",
         "CHANGELOG.md",
+        "CONTRIBUTING.md",
         "SECURITY.md",
     )
     # Then each one is linked by its absolute repository URL

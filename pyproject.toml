@@ -10,6 +10,18 @@ readme = "README.md"
 requires-python = ">=3.13"
 license = { text = "MIT" }
 authors = [{ name = "Harish Seshadri", email = "harish.seshadri@gmail.com" }]
+keywords = [
+    "scoring",
+    "evaluation",
+    "normalization",
+    "weighted-mean",
+    "explainability",
+    "ranking-metrics",
+    "ndcg",
+    "calibration",
+    "inter-rater-agreement",
+    "bootstrap-confidence-intervals",
+]
 classifiers = [
     "Development Status :: 3 - Alpha",
     "Intended Audience :: Developers",
@@ -59,6 +71,7 @@ assay = "assay.cli:main"
 
 [project.urls]
 Homepage = "https://github.com/gainratio/assay"
+Documentation = "https://github.com/gainratio/assay#readme"
 Repository = "https://github.com/gainratio/assay"
 Issues = "https://github.com/gainratio/assay/issues"
 

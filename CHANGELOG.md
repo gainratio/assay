@@ -2,6 +2,11 @@
 
 ## [Unreleased]
 
+### Added
+
+- `CONTRIBUTING.md` contributor setup and pull request guide, plus an `## Under the hood (for developers)` technical summary in `README.md`.
+- Search and package-registry `keywords` and project URLs in `pyproject.toml` and `ts/package.json`. Because `package.json` is part of the normalized npm tarball, the pinned archive SHA-256 for `@gainratio/assay` checkout builds moves to `eb1a072e…7750846` with no scoring change.
+
 ### Changed
 
 - **Prereleases publish to npm `latest` until a stable release exists.** Before, every
@@ -10,15 +15,33 @@
   plan picks `latest` for a prerelease whenever `latest` does not already name a stable
   version; once one does, prereleases go back to `next`. The `next` tag is left where
   it is meanwhile (it stays on `0.5.0-dev.6`). No scoring change.
-- **Next prerelease is `0.5.0-dev.6`** (Python `assay-engine` `0.5.0.dev6`, npm
-  `@gainratio/assay` `0.5.0-dev.6`). Nothing was published as `0.5.0-dev.5`. Its candidate
+- The README is rewritten in plain English: one-sentence description, a copy-paste
+  Python and JavaScript example with real output, honest limits, and a link to every
+  technical doc. Deep material moved to `docs/ARCHITECTURE.md` and `docs/OPERATIONS.md`,
+  and a new `docs/GETTING_STARTED.md` takes a developer from clone to first change.
+  `tests/test_readme_contract.py` now pins the section order, the doc links, and a
+  banned-jargon list. The Python and npm package descriptions equal the new first
+  sentence, which changes the pinned npm archive SHA-256 to `eb115cbd…a10d1b3ee`;
+  scoring sources are unchanged and nothing was re-published.
+- The README follows the portfolio template: a plain-language first screen, a runnable
+  60-second example whose real output is the hero, and a `tests/test_readme_contract.py`
+  gate that re-runs that example. The Python and npm package descriptions now equal the
+  README tagline, which changes the pinned npm archive SHA-256 to `df935452…010dfd9`;
+  scoring sources are unchanged and nothing was re-published.
+
+## [0.5.0-dev.6] - 2026-10-03
+
+### Changed
+
+- **Prerelease `0.5.0-dev.6`** (Python `assay-engine` `0.5.0.dev6`, npm
+  `@gainratio/assay` `0.5.0-dev.6`, tag `v0.5.0-dev.6`). Nothing was published as `0.5.0-dev.5`. Its candidate
   passed, but the publish workflow failed twice. First, the `npm-release` environment
   only allowed tag deployments, while a `workflow_run` publish job runs on `main`, so
   GitHub refused the jobs. The owner added a `main` branch rule to that environment.
   Then both jobs refused the exact, untampered candidate with "candidate envelope
   contains unexpected material" (fixed in #95, below). `v0.5.0-dev.5` stays on a commit
   that is no longer `main`, so the version moves on. No scoring change. The pinned npm
-  archive SHA-256 is `dbc72f99…222a098f`.
+  archive SHA-256 at tag time was `dbc72f99…222a098f`.
 - **Next prerelease is `0.5.0-dev.5`** (Python `assay-engine` `0.5.0.dev5`, npm
   `@gainratio/assay` `0.5.0-dev.5`). Nothing was published as `0.5.0-dev.4`: its release
   candidate stopped at the identity check because the Dagger step had no
@@ -61,19 +84,6 @@
 
 ### Changed
 
-- The README is rewritten in plain English: one-sentence description, a copy-paste
-  Python and JavaScript example with real output, honest limits, and a link to every
-  technical doc. Deep material moved to `docs/ARCHITECTURE.md` and `docs/OPERATIONS.md`,
-  and a new `docs/GETTING_STARTED.md` takes a developer from clone to first change.
-  `tests/test_readme_contract.py` now pins the section order, the doc links, and a
-  banned-jargon list. The Python and npm package descriptions equal the new first
-  sentence, which changes the pinned npm archive SHA-256 to `eb115cbd…a10d1b3ee`;
-  scoring sources are unchanged and nothing was re-published.
-- The README follows the portfolio template: a plain-language first screen, a runnable
-  60-second example whose real output is the hero, and a `tests/test_readme_contract.py`
-  gate that re-runs that example. The Python and npm package descriptions now equal the
-  README tagline, which changes the pinned npm archive SHA-256 to `df935452…010dfd9`;
-  scoring sources are unchanged and nothing was re-published.
 - The scoring-only release candidate now has independent Python 3.13 and Node 22.13.0
   gates, cross-runtime parity, 120 mutation guards, installed-artifact examples, frozen
   benchmarks, reproducible minimal artifacts, and fail-closed registry verification.

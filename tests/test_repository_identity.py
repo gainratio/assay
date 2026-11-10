@@ -263,7 +263,12 @@ def test_should_name_gainratio_as_home_in_both_package_manifests() -> None:
     package = json.loads((ROOT / "ts" / "package.json").read_text(encoding="utf-8"))
 
     # When / Then: npm provenance needs repository.url to match the publishing repository
-    assert urls == {"Homepage": home, "Repository": home, "Issues": f"{home}/issues"}
+    assert urls == {
+        "Homepage": home,
+        "Documentation": f"{home}#readme",
+        "Repository": home,
+        "Issues": f"{home}/issues",
+    }
     assert package["repository"]["url"] == f"git+{home}.git"
     assert package["homepage"] == f"{home}#readme"
     assert package["bugs"] == {"url": f"{home}/issues"}

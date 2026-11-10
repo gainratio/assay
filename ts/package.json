@@ -12,6 +12,11 @@
     "weighted-mean",
     "explainability",
     "evaluation",
+    "ranking-metrics",
+    "ndcg",
+    "calibration",
+    "multi-criteria-decision",
+    "deterministic-scoring",
     "typescript"
   ],
   "license": "MIT",

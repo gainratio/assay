@@ -166,6 +166,13 @@ Older Python code may use the Python-only deep import `assay.composite` (`SubSco
 `composite(...)`). It has no TypeScript version and no fingerprint, so new code should
 use `parse_request()` and `compose()` from the package root.
 
+## Under the hood (for developers)
+
+- **Strict schema parsing first (`parse_request` / `parseRequest`).** Unknown fields, non-finite IEEE-754 floats, out-of-bounds values (`clamp: "reject"`), and duplicate component IDs stop before any arithmetic runs and raise a stable, value-free `assay.*` error code.
+- **Linear scale normalization.** Each component value maps onto `[0, 1]` using `(value - minimum) / (maximum - minimum)` when higher is better, or `(maximum - value) / (maximum - minimum)` when lower is better, canonicalizing `-0.0` to `+0.0`.
+- **Three deterministic combiners.** `weighted_mean` divides each weight by `weight_total`; `additive` sums `intercept + coefficient * normalized` strictly left-to-right; `minimum` picks the lowest normalized component and breaks ties by choosing the first declared component.
+- **Binary64 input fingerprint (`inputs_hash`).** Every numeric input is encoded as big-endian IEEE-754 binary64 bits in declared component order and hashed with SHA-256 (`sha256:...`), so Python (`src/assay/`) and zero-dependency TypeScript (`ts/src/`) produce the exact same score and digest across [`testdata/vectors/`](https://github.com/gainratio/assay/tree/main/testdata/vectors).
+
 ## Develop
 
 You need Python 3.13 with [uv](https://docs.astral.sh/uv/), and Node 22.13.0 with pnpm
@@ -198,6 +205,7 @@ bash examples/run_composite.sh
 - [Quickstart](https://github.com/gainratio/assay/blob/main/QUICKSTART.md): the command line and building both packages from a checkout.
 - [TypeScript package](https://github.com/gainratio/assay/blob/main/ts/README.md): the npm package on its own.
 - [CHANGELOG](https://github.com/gainratio/assay/blob/main/CHANGELOG.md): what changed in each version.
+- [CONTRIBUTING.md](https://github.com/gainratio/assay/blob/main/CONTRIBUTING.md): setup, local checks, and pull request workflow.
 - [SECURITY.md](https://github.com/gainratio/assay/blob/main/SECURITY.md): how to report a vulnerability privately.
 - Bugs and feature requests: [GitHub Issues](https://github.com/gainratio/assay/issues).
 
