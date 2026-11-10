@@ -15,10 +15,13 @@ WORKFLOW_ROOT = ROOT / ".github/workflows"
 PINNED_USE = re.compile(
     r"\s*(?:- )?uses: [\w.-]+/[\w.-]+(?:/[\w./-]+)?@[0-9a-f]{40} # v\d+\.\d+\.\d+"
 )
-EXPECTED_NPM_SHA256 = "3105ce580b8f19c1296a41e9399b7bb34aa5196a53b3fe8ed3fc160fbdd87364"
+EXPECTED_NPM_SHA256 = "eb1a072e75860ec2825d05ce5396d2fb41e7f928ffefc1b310fc02cfa7750846"
 
 
 def _node_environment() -> dict[str, str]:
+    probe = subprocess.run(["node", "--version"], capture_output=True, text=True, check=False)
+    if probe.returncode == 0 and probe.stdout.startswith("v22."):
+        return dict(os.environ)
     environments = tuple((Path.home() / ".nvm/versions/node").glob("v22.*/bin"))
     if not environments:
         return dict(os.environ)
